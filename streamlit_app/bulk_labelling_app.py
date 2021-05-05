@@ -19,49 +19,80 @@ from cymem.cymem import Pool
 import json
 
 
-Embedding_frameworks = pd.Series(['English Spacy', 'Byte Pair Language', 'Multilingual Universal Sentence encoder', 'Distilbert Multilingual', 'French Spacy', 'Universal Sentence Encoder','CountVectorLanguage'])
-Embedding_frameworks_languages = pd.Series(['english', 'english', 'multilingual', 'multilingual', 'french', 'english', 'english'])
+Embedding_frameworks = pd.Series(['Byte Pair Language', 'English Spacy','Multilingual Universal Sentence encoder', 'Distilbert Multilingual', 'French Spacy', 'Universal Sentence Encoder','CountVectorLanguage','flauBERT','camemBERT'])
+Embedding_frameworks_languages = pd.Series(['english', 'english', 'multilingual', 'multilingual', 'french', 'english', 'english','french','french'])
 Embedding_frameworks_dataframe = pd.DataFrame(Embedding_frameworks)
 Embedding_frameworks_dataframe['language'] = Embedding_frameworks_languages
 Embedding_frameworks_dataframe.columns = ['framework', 'language']
 
 
+@streamlit.cache
 def get_embedding(vec, text):
     return Embedding(text, vec)
 
-
+@streamlit.cache
 def get_embeddingset(veclist, textlist):
     return EmbeddingSet(*[get_embedding(veclist[q], textlist[q]) for q in range(len(textlist))])
 
 
+@streamlit.cache
+def get_language_array(lang,textlist=None):
+    if isinstance(lang, EmbeddingSet):
+        return lang.to_names_X()[1],lang.to_names_X()[0]
+    if isinstance(lang,SentenceTransformer):
+        encoding=lang.encode(textlist)
+        # streamlit.write(encoding.shape)
+        return encoding,textlist
+    else:
+        return lang[textlist].to_names_X()[1],lang[textlist].to_names_X()[0]
+    
+
+@streamlit.cache
 def prepare_data(lang, transformer, textlist=None):
     progress_container.text("preparing data...")
-    if isinstance(lang, EmbeddingSet):
-        return lang.transform(transformer)
-    progress_container.text("preparing data...")
-    result = lang[textlist].transform(transformer)
+
+    encoding,texts= get_language_array(lang,textlist)   
+    embset=get_embeddingset(encoding,texts)
+    result=embset.transform(transformer)
+    # streamlit.write(result)
+    # progress_container.text("preparing data...")
+    # streamlit.write(f'length of textlist :{len(textlist)}')
+    # if isinstance(lang,SentenceTransformer):
+    #     encoding=lang.encode(textlist)
+    #     streamlit.write(f'length of encoding by distilbert: {len(encoding)}')
+    #     result = get_embeddingset(lang.encode(textlist),textlist).transform(transformer)
+    # else:
+        # result = lang[textlist].transform(transformer)
     progress_container.text("data prepared!")
     return result
 
 
+@streamlit.cache
 def make_plot(lang, transformer, textlist=None):
     return prepare_data(lang, transformer, textlist).plot_interactive(annot=False).properties(width=1000, height=500, title=type(lang).__name__)
+
+streamlit.write()
+
 
 def load_languages(language):
     if language=='CountVectorLanguage':
         return CountVectorLanguage(10)
     if language=='Universal Sentence Encoder':
-        return TFHubLanguage('https://tfhub.dev/google/universal-sentence-encoder/4')
+        return TFHubLanguage(os.path.abspath('universal-sentence-encoder_4'))
     if language=='Byte Pair Language':
         return BytePairLanguage("en", dim=300, vs=200_000)
     if language=='Multilingual Universal Sentence encoder':
-        return TFHubLanguage('https://tfhub.dev/google/universal-sentence-encoder-multilingual/3')
+        return TFHubLanguage(os.path.abspath('universal-sentence-encoder-multilingual-large_3'))
     if language == 'Distilbert Multilingual':
         return SentenceTransformer('quora-distilbert-multilingual')
     if language == 'French Spacy':
         return SpacyLanguage('fr_core_news_sm')
     if language == 'English Spacy':
         return SpacyLanguage("en_core_web_md")
+    if language == 'FlauBERT':
+        return SentenceTransformer('flaubert/flaubert_base_uncased')
+    if language == 'camemBERT':
+        return SentenceTransformer('camembert-base')
     return CountVectorLanguage(10)
 
 
@@ -127,14 +158,14 @@ map.header("Dimension reduction")
 
 transformer_option = map.selectbox('Dimension reduction framework', ('TSNE', 'PCA', 'Umap'))
 transformer = transformers_dict[transformer_option]
-map.write(lang)
-map.write(transformer)
+# map.write(lang)
+# map.write(transformer)
 try:
     column_name = streamlit.selectbox('columns',options=['-']+dataset.columns.tolist())
     
     if column_name!='-':
-        streamlit.altair_chart(make_plot(lang, transformer, dataset[column_name].astype(str).head(5000)),use_container_width=True)
+        streamlit.altair_chart(make_plot(lang, transformer, dataset[column_name].astype(str).head(5000).tolist()),use_container_width=True)
 except Exception as error:
-    streamlit.write(error)
+    pass
 # slidernumber = streamlit.slider('number of points', 0, 2000, 1000)
 
