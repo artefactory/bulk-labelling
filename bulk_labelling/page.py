@@ -1,4 +1,5 @@
 
+from datasets import dataset_dict
 import streamlit
 import os
 import pandas as pd
@@ -9,6 +10,7 @@ import pathlib
 from streamlit.uploaded_file_manager import UploadedFile
 import tensorflow as tf
 import tensorflow_hub
+from whatlies import language
 from whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
 from whatlies.language import TFHubLanguage
 from whatlies import Embedding, EmbeddingSet
@@ -19,69 +21,14 @@ from cymem.cymem import Pool
 import json
 
 
-from bulk_labelling.load_config import load_languages,load_transformer,load_dataset
+from bulk_labelling.load_config import load_languages,load_transformer,load_dataset,load_config
 from bulk_labelling.embedding import get_embedding,get_embeddingset,get_language_array
 from bulk_labelling.plotting import prepare_data,make_plot
 
 
 def write():
-    Embedding_frameworks = pd.Series(['Byte Pair Language', 'English Spacy', 'Multilingual Universal Sentence encoder', 'Distilbert Multilingual', 'French Spacy', 'Universal Sentence Encoder', 'CountVectorLanguage', 'flauBERT', 'camemBERT'])
-    Embedding_frameworks_languages = pd.Series(['english', 'english', 'multilingual', 'multilingual', 'french', 'english', 'english', 'french', 'french'])
-    Embedding_frameworks_dataframe = pd.DataFrame(Embedding_frameworks)
-    Embedding_frameworks_dataframe['language'] = Embedding_frameworks_languages
-    Embedding_frameworks_dataframe.columns = ['framework', 'language']
-
-
-    # @streamlit.cache
-    # def get_embedding(vec, text):
-    #     return Embedding(text, vec)
-
-
-    # @streamlit.cache
-    # def get_embeddingset(veclist, textlist):
-    #     return EmbeddingSet(*[get_embedding(veclist[q], textlist[q]) for q in range(len(textlist))])
-
-
-    # @streamlit.cache
-    # def get_language_array(lang, textlist=None):
-    #     if isinstance(lang, EmbeddingSet):
-    #         return lang.to_names_X()[1], lang.to_names_X()[0]
-    #     if isinstance(lang, SentenceTransformer):
-    #         encoding = lang.encode(textlist)
-    #         # streamlit.write(encoding.shape)
-    #         return encoding, textlist
-    #     else:
-    #         return lang[textlist].to_names_X()[1], lang[textlist].to_names_X()[0]
-
-
-    # @streamlit.cache
-    # def prepare_data(lang, transformer, textlist=None):
-    #     progress_container.text("preparing data...")
-
-    #     encoding, texts = get_language_array(lang, textlist)
-    #     embset = get_embeddingset(encoding, texts)
-    #     result = embset.transform(transformer)
-    #     progress_container.text("data prepared!")
-    #     return result
-
-
-    # @streamlit.cache
-    # def make_plot(lang, transformer, textlist=None):
-    #     return prepare_data(lang, transformer, textlist).plot_interactive(annot=False).properties(width=1000, height=500, title=type(lang).__name__)
-
-
-    datasets_dict = ["-", "bing_coronavirus_query_set", "app_reviews", "emotion"]
-    transformers_dict = {'PCA': "Pca(2)", 'TSNE': "Tsne(2)", 'Umap': "Umap(2)"}
-    languages_dict = {'CountVectorLanguage': "CountVectorLanguage(10)",
-                    'Universal Sentence Encoder': "TFHubLanguage(os.path.abspath('data/models/universal-sentence-encoder_4'))",
-                    'Byte Pair Language': "BytePairLanguage('en', dim=300, vs=200_000)",
-                    'Multilingual Universal Sentence encoder': "TFHubLanguage(os.path.abspath('data/models/universal-sentence-encoder-multilingual-large_3'))",
-                    'Distilbert Multilingual': "SentenceTransformer('quora-distilbert-multilingual')",
-                    'French Spacy': "SpacyLanguage('fr_core_news_sm')",
-                    'English Spacy': "SpacyLanguage('en_core_web_md')",
-                    'FlauBERT': "SentenceTransformer('flaubert/flaubert_base_uncased')",
-                    'camemBERT': "SentenceTransformer('camembert-base')"
-                    }
+    
+    languages_dict,transformers_dict,datasets_dict,Embedding_frameworks_dataframe=load_config()
 
 
     streamlit.sidebar.title('Bulk labelling')
@@ -89,27 +36,6 @@ def write():
     dataset_upload = streamlit.sidebar.beta_expander('1. Select your dataset')
     available_datasets = datasets_dict + [i for i in os.listdir('data/datasets') if '.csv' in i]
     option = dataset_upload.selectbox('Dataset:', available_datasets, index=0)
-    progress_container = streamlit.empty()
-
-
-    # @streamlit.cache
-    # def load_dataset(dataset_name,datasets_dict):
-    #     progress_container.text("loading dataset...")
-    #     if dataset_name in datasets_dict:
-    #         if dataset_name != '-':
-    #             if dataset_name == 'bing_coronavirus_query_set':
-    #                 dataset = datasets.load_dataset("bing_coronavirus_query_set", queries_by="country", start_date="2020-09-01", end_date="2020-09-30")
-    #             else:
-    #                 dataset = datasets.load_dataset(dataset_name)
-    #             dataset = pd.DataFrame.from_dict(dataset['train'])
-    #             progress_container.text("dataset loaded!")
-    #             return dataset
-    #     else:
-    #         dataset = pd.read_csv(f'data/datasets/{dataset_name}')
-    #         progress_container.text("dataset loaded!")
-
-    #         return dataset
-
 
     dataset = load_dataset(option,datasets_dict)
     dataframe_preview = dataset_upload.empty()

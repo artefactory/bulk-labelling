@@ -6,12 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datasets
 import pathlib
+import yaml
 from streamlit.uploaded_file_manager import UploadedFile
 import tensorflow as tf
 import tensorflow_hub
 from whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
 from whatlies.language import TFHubLanguage
-from whatlies import Embedding, EmbeddingSet
+from whatlies import Embedding, EmbeddingSet, embedding
 from whatlies.transformers import Pca, Umap, Tsne, Lda
 from sentence_transformers import SentenceTransformer
 from preshed.maps import PreshMap
@@ -41,5 +42,12 @@ def load_languages(language, languages_dict):
 def load_transformer(option,transformers_dict):
     transformer = eval(transformers_dict[option])
     return transformer
+
+def load_config():
+    result=yaml.load(open('config/config.yml'))
+    embedding_framework=pd.DataFrame.from_dict(result['embedding_framework'])
+
+    return result['languages_dict'],result['transformers_dict'],result['datasets_dict'],embedding_framework
+
 
 
