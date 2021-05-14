@@ -28,14 +28,23 @@ def get_embedding(vec, text):
 def get_embeddingset(veclist, textlist):
     return EmbeddingSet(*[get_embedding(veclist[q], textlist[q]) for q in range(len(textlist))])
 
-@streamlit.cache
+@streamlit.cache(allow_output_mutation=True)
 def get_language_array(lang, textlist=None):
     if isinstance(lang, EmbeddingSet):
         return lang.to_names_X()[1], lang.to_names_X()[0]
     if isinstance(lang, SentenceTransformer):
         encoding = lang.encode(textlist)
-        # streamlit.write(encoding.shape)
         return encoding, textlist
     else:
         return lang[textlist].to_names_X()[1], lang[textlist].to_names_X()[0]
 
+def cluster(algo,embset):
+    transformed=embset[['d1','d2']].values
+    
+    clustering = algo.fit(transformed)
+
+    labels = clustering.labels_
+    embed=embset.copy()
+    embed['labels'] = labels
+    embed['labels']=embed['labels'].astype(str)
+    return embed

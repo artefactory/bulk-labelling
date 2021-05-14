@@ -12,3 +12,6 @@ cymem==2.0.5
 preshed==3.0.5
 human_learn==0.3.1
 PyYAML==5.4.1
+matplotlib==3.3.2
+datasets==1.4.1
+bokeh==2.2.3

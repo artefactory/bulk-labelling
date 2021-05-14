@@ -1,4 +1,4 @@
-import streamlit as st  # type: ignore
+import streamlit as st
 
 import bulk_labelling.page as bulk_labelling_app
 

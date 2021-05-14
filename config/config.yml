@@ -6,7 +6,7 @@ languages_dict:
   Distilbert Multilingual: "SentenceTransformer('quora-distilbert-multilingual')"
   French Spacy: "SpacyLanguage('fr_core_news_sm')"
   English Spacy: "SpacyLanguage('en_core_web_md')"
-  FlauBERT: "SentenceTransformer('flaubert/flaubert_base_uncased')"
+  flauBERT: "SentenceTransformer('flaubert/flaubert_base_uncased')"
   camemBERT: "SentenceTransformer('camembert-base')"
 
 transformers_dict:
