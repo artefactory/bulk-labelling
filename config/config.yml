@@ -1,0 +1,43 @@
+languages_dict:
+  CountVectorLanguage: "CountVectorLanguage(10)"
+  Universal Sentence Encoder: "TFHubLanguage(os.path.abspath('data/models/universal-sentence-encoder_4'))"
+  Byte Pair Language: "BytePairLanguage('en', dim=300, vs=200_000)"
+  Multilingual Universal Sentence encoder: "TFHubLanguage(os.path.abspath('data/models/universal-sentence-encoder-multilingual-large_3'))"
+  Distilbert Multilingual: "SentenceTransformer('quora-distilbert-multilingual')"
+  French Spacy: "SpacyLanguage('fr_core_news_sm')"
+  English Spacy: "SpacyLanguage('en_core_web_md')"
+  flauBERT: "SentenceTransformer('flaubert/flaubert_base_uncased')"
+  camemBERT: "SentenceTransformer('camembert-base')"
+
+transformers_dict:
+  PCA: "Pca(2)"
+  TSNE: "Tsne(2)"
+  Umap: "Umap(2)"
+
+datasets_dict : 
+  - '-'
+  - 'bing_coronavirus_query_set'
+  - 'app_reviews'
+  - 'emotion'
+
+embedding_framework:
+  framework: 
+    - 'Byte Pair Language'
+    - 'English Spacy'
+    - 'Multilingual Universal Sentence encoder'
+    - 'Distilbert Multilingual'
+    - 'French Spacy'
+    - 'Universal Sentence Encoder'
+    - 'CountVectorLanguage'
+    - 'flauBERT'
+    - 'camemBERT'
+  language: 
+    - 'english'
+    - 'english'
+    - 'multilingual'
+    - 'multilingual'
+    - 'french'
+    - 'english'
+    - 'english'
+    - 'french'
+    - 'french'
