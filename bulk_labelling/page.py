@@ -96,6 +96,11 @@ def write():
 
     validate = streamlit.sidebar.checkbox('refresh plot')
 
+    clear_cache = streamlit.sidebar.button('clear cache')
+
+    if clear_cache:
+        [f.unlink() for f in pathlib.Path("data/plotting_data").glob("*") if f.is_file()]
+
     if dataset is not None:
         column_name = column_select.selectbox(
             'columns', options=['-'] + dataset.columns.tolist())

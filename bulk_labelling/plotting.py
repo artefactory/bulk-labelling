@@ -45,13 +45,17 @@ def make_plot(embed):
 
 def suggest_clusters(embset,algo):
     embed = cluster(algo, embset)
+    return embed
+
+def suggestion_chart(embed):
+    
     chart = alt.Chart(embed).mark_circle().encode(
         x=alt.X('d1', axis=None),
         y=alt.Y('d2', axis=None),
         color=alt.Color('labels', legend=None),
         tooltip=['text'],
     ).interactive().properties(width=400, height=400, title='').configure_view(strokeOpacity=0)
-    return chart, embed
+    return chart
 
 
 @streamlit.cache(allow_output_mutation=True)
