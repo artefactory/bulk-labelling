@@ -85,4 +85,4 @@ def make_interactive_plot(embset):
     return plot, df
 
 def clear_cache():
-    [f.unlink() for f in pathlib.Path("data/plotting_data").glob("*") if f.is_file()]
+    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*") if f.is_file()]

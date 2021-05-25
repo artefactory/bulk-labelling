@@ -107,7 +107,7 @@ def write():
 
     if validate and column_name != '-':
 
-        if ('cache.json' not in os.listdir('data/plotting_data')):
+        if ('cache.json' not in os.listdir('data/plotting_data/cache')):
             lang = load_languages(embedding_language, languages_dict)
             transformer = load_transformer(
                 transformer_option, transformers_dict)
@@ -115,14 +115,14 @@ def write():
             embset = prepare_data(lang, transformer, textlist)
             embedding_df = embset.to_dataframe().reset_index()
             embedding_df['labelling_uuid']=dataset.labelling_uuid
-            embedding_df.to_csv('data/plotting_data/cache.csv', index=False)
+            embedding_df.to_csv('data/plotting_data/cache/cache.csv', index=False)
             json_cache = {'dataset': option, 'column': column_name,
                           'language_model': embedding_language, 'reduction_algorithm': transformer_option}
-            with open('data/plotting_data/cache.json', 'w', encoding='utf-8') as f:
+            with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
                 json.dump(json_cache, f, ensure_ascii=False, indent=4)
 
-        if ('cache.json' in os.listdir('data/plotting_data')):
-            f = open('data/plotting_data/cache.json')
+        if ('cache.json' in os.listdir('data/plotting_data/cache')):
+            f = open('data/plotting_data/cache/cache.json')
             cached_data = json.load(f)
             json_cache = {'dataset': option, 'column': column_name,
                           'language_model': embedding_language, 'reduction_algorithm': transformer_option}
@@ -135,13 +135,13 @@ def write():
                 embedding_df = embset.to_dataframe().reset_index()
                 embedding_df['labelling_uuid']=dataset.labelling_uuid
                 embedding_df.to_csv(
-                    'data/plotting_data/cache.csv', index=False)
+                    'data/plotting_data/cache/cache.csv', index=False)
                 json_cache = {'dataset': option, 'column': column_name,
                               'language_model': embedding_language, 'reduction_algorithm': transformer_option}
-                with open('data/plotting_data/cache.json', 'w', encoding='utf-8') as f:
+                with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
                     json.dump(json_cache, f, ensure_ascii=False, indent=4)
             else:
-                embedding_df = pd.read_csv('data/plotting_data/cache.csv')
+                embedding_df = pd.read_csv('data/plotting_data/cache/cache.csv')
         embedding_df = embedding_df.rename(columns={
                                            embedding_df.columns[0]: 'text', embedding_df.columns[1]: 'd1', embedding_df.columns[2]: 'd2'})
         if 'labels' not in embedding_df.columns:
