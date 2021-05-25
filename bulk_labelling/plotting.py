@@ -11,6 +11,7 @@ import streamlit
 # from whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
 # from whatlies.language import TFHubLanguage
 from whatlies import Embedding, EmbeddingSet
+import pathlib
 # from whatlies.transformers import Pca, Umap, Tsne, Lda
 # from sentence_transformers import SentenceTransformer
 # from preshed.maps import PreshMap
@@ -23,7 +24,7 @@ import altair as alt
 
 
 @streamlit.cache
-def prepare_data(lang, transformer, textlist=None):
+def prepare_data(lang, transformer, textlist=None,uuid=None):
 
     encoding, texts = get_language_array(lang, textlist)
     embset = get_embeddingset(encoding, texts)
@@ -82,3 +83,6 @@ def make_interactive_plot(embset):
                 color='#3341F6', size=6, fill_alpha=0.7)
 
     return plot, df
+
+def clear_cache():
+    [f.unlink() for f in pathlib.Path("data/plotting_data").glob("*") if f.is_file()]
