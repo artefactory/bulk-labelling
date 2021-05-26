@@ -26,9 +26,10 @@ from bokeh.models import DataTable, TableColumn, ColumnDataSource, CustomJS
 from sklearn.cluster import OPTICS
 
 
+
 from bulk_labelling.load_config import load_languages, load_transformer, load_dataset, load_config
 from bulk_labelling.embedding import get_embedding, get_embeddingset, get_language_array
-from bulk_labelling.plotting import prepare_data, make_plot, make_interactive_plot, suggest_clusters
+from bulk_labelling.plotting import prepare_data, make_plot, make_interactive_plot, suggest_clusters,clear_cache
 
 from bulk_labelling.pages import plain_plot, cluster_suggestion
 
@@ -40,8 +41,7 @@ def write():
     streamlit.sidebar.title('Bulk labelling')
     dataset_upload = streamlit.sidebar.beta_expander('1. Select your dataset')
 
-    available_datasets = datasets_dict + \
-        [i for i in os.listdir('data/datasets') if '.csv' in i]
+    available_datasets = ['-']+[i for i in os.listdir('data/datasets') if '.csv' in i]
     option = dataset_upload.selectbox('Dataset:', available_datasets, index=0)
 
     dataset = None
@@ -96,27 +96,33 @@ def write():
 
     validate = streamlit.sidebar.checkbox('refresh plot')
 
+    clear_cache_button = streamlit.sidebar.button('clear cache')
+
+    if clear_cache_button:
+        clear_cache()
+
     if dataset is not None:
         column_name = column_select.selectbox(
             'columns', options=['-'] + dataset.columns.tolist())
 
     if validate and column_name != '-':
 
-        if ('cache.json' not in os.listdir('data/plotting_data')):
+        if ('cache.json' not in os.listdir('data/plotting_data/cache')):
             lang = load_languages(embedding_language, languages_dict)
             transformer = load_transformer(
                 transformer_option, transformers_dict)
-            textlist = dataset.sample(frac=1)[column_name].astype(str).head(5000).tolist()
+            textlist = dataset[column_name].astype(str).tolist()
             embset = prepare_data(lang, transformer, textlist)
             embedding_df = embset.to_dataframe().reset_index()
-            embedding_df.to_csv('data/plotting_data/cache.csv', index=False)
+            embedding_df['labelling_uuid']=dataset.labelling_uuid
+            embedding_df.to_csv('data/plotting_data/cache/cache.csv', index=False)
             json_cache = {'dataset': option, 'column': column_name,
                           'language_model': embedding_language, 'reduction_algorithm': transformer_option}
-            with open('data/plotting_data/cache.json', 'w', encoding='utf-8') as f:
+            with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
                 json.dump(json_cache, f, ensure_ascii=False, indent=4)
 
-        if ('cache.json' in os.listdir('data/plotting_data')):
-            f = open('data/plotting_data/cache.json')
+        if ('cache.json' in os.listdir('data/plotting_data/cache')):
+            f = open('data/plotting_data/cache/cache.json')
             cached_data = json.load(f)
             json_cache = {'dataset': option, 'column': column_name,
                           'language_model': embedding_language, 'reduction_algorithm': transformer_option}
@@ -124,17 +130,18 @@ def write():
                 lang = load_languages(embedding_language, languages_dict)
                 transformer = load_transformer(
                     transformer_option, transformers_dict)
-                textlist = dataset.sample(frac=1)[column_name].astype(str).head(5000).tolist()
+                textlist = dataset[column_name].astype(str).tolist()
                 embset = prepare_data(lang, transformer, textlist)
                 embedding_df = embset.to_dataframe().reset_index()
+                embedding_df['labelling_uuid']=dataset.labelling_uuid
                 embedding_df.to_csv(
-                    'data/plotting_data/cache.csv', index=False)
+                    'data/plotting_data/cache/cache.csv', index=False)
                 json_cache = {'dataset': option, 'column': column_name,
                               'language_model': embedding_language, 'reduction_algorithm': transformer_option}
-                with open('data/plotting_data/cache.json', 'w', encoding='utf-8') as f:
+                with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
                     json.dump(json_cache, f, ensure_ascii=False, indent=4)
             else:
-                embedding_df = pd.read_csv('data/plotting_data/cache.csv')
+                embedding_df = pd.read_csv('data/plotting_data/cache/cache.csv')
         embedding_df = embedding_df.rename(columns={
                                            embedding_df.columns[0]: 'text', embedding_df.columns[1]: 'd1', embedding_df.columns[2]: 'd2'})
         if 'labels' not in embedding_df.columns:
@@ -162,7 +169,7 @@ def write():
                             name_select_value = name_select.text_input(
                                 'Input selected data label')
                             if name_select_value:
-                                selected_data['label'] = name_select_value
+                                selected_data['labels'] = name_select_value
                                 selected_data.to_csv(
                                     'data/labeled_data/test_data.csv', encoding='utf-8', index=False)
 
