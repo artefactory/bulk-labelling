@@ -11,11 +11,12 @@ import pathlib
 from streamlit.uploaded_file_manager import UploadedFile
 import tensorflow as tf
 import tensorflow_hub
-from whatlies import language
-from whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
-from whatlies.language import TFHubLanguage
-from whatlies import Embedding, EmbeddingSet
-from whatlies.transformers import Pca, Umap, Tsne, Lda
+# from bulk_labelling.custom_whatlies import language
+from bulk_labelling.custom_whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
+from bulk_labelling.custom_whatlies.language import TFHubLanguage
+from bulk_labelling.custom_whatlies.embedding import Embedding
+from bulk_labelling.custom_whatlies.embeddingset import EmbeddingSet
+from bulk_labelling.custom_whatlies.transformers import Pca, Umap, Tsne
 from sentence_transformers import SentenceTransformer
 from preshed.maps import PreshMap
 from cymem.cymem import Pool
@@ -41,7 +42,7 @@ def write():
     streamlit.sidebar.title('Bulk labelling')
     dataset_upload = streamlit.sidebar.beta_expander('1. Select your dataset')
 
-    available_datasets = ['-']+[i for i in os.listdir('data/datasets') if '.csv' in i]
+    available_datasets = [i for i in os.listdir('data/datasets') if '.csv' in i] + datasets_dict
     option = dataset_upload.selectbox('Dataset:', available_datasets, index=0)
 
     dataset = None

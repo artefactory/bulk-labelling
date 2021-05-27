@@ -1,26 +1,13 @@
 import streamlit
-# import os
-# import pandas as pd
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import datasets
-# import pathlib
-# from streamlit.uploaded_file_manager import UploadedFile
-# import tensorflow as tf
-# import tensorflow_hub
-# from whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
-# from whatlies.language import TFHubLanguage
-from whatlies import Embedding, EmbeddingSet
+from bulk_labelling.custom_whatlies.embedding import Embedding
+from bulk_labelling.custom_whatlies.embeddingset import EmbeddingSet
 import pathlib
-# from whatlies.transformers import Pca, Umap, Tsne, Lda
-# from sentence_transformers import SentenceTransformer
-# from preshed.maps import PreshMap
-# from cymem.cymem import Pool
 from bulk_labelling.embedding import get_embeddingset, get_language_array, cluster
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, CustomJS
 # from sklearn.cluster import OPTICS, DBSCAN, MeanShift, estimate_bandwidth
 import altair as alt
+import os
 
 
 @streamlit.cache
@@ -85,4 +72,4 @@ def make_interactive_plot(embset):
     return plot, df
 
 def clear_cache():
-    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*") if f.is_file()]
+    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*") if (f.is_file() and not os.path.basename(f).startswith('.git'))]
