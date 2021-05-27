@@ -1,28 +1,11 @@
-from datasets import dataset_dict
-from sklearn import cluster
 import streamlit
-import os
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import datasets
-import pathlib
-from streamlit.uploaded_file_manager import UploadedFile
-import tensorflow as tf
-import tensorflow_hub
 from bulk_labelling.custom_whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
 from bulk_labelling.custom_whatlies.language import TFHubLanguage
 from bulk_labelling.custom_whatlies.embedding import Embedding
 from bulk_labelling.custom_whatlies.embeddingset import EmbeddingSet
 from bulk_labelling.custom_whatlies.transformers import Pca, Umap, Tsne
-from sentence_transformers import SentenceTransformer
 from preshed.maps import PreshMap
 from cymem.cymem import Pool
-import json
-from hulearn.preprocessing import InteractivePreprocessor
-from streamlit_bokeh_events import streamlit_bokeh_events
-from bokeh.models import DataTable, TableColumn, ColumnDataSource, CustomJS
-from sklearn.cluster import OPTICS
 
 
 from bulk_labelling.load_config import load_languages, load_transformer, load_dataset, load_config

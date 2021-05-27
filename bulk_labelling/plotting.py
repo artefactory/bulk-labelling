@@ -1,3 +1,4 @@
+from bokeh.models.annotations import Tooltip
 import streamlit
 from bulk_labelling.custom_whatlies.embedding import Embedding
 from bulk_labelling.custom_whatlies.embeddingset import EmbeddingSet
@@ -11,7 +12,7 @@ import os
 
 
 @streamlit.cache
-def prepare_data(lang, transformer, textlist=None,uuid=None):
+def prepare_data(lang, transformer, textlist=None, uuid=None):
 
     encoding, texts = get_language_array(lang, textlist)
     embset = get_embeddingset(encoding, texts)
@@ -22,21 +23,22 @@ def prepare_data(lang, transformer, textlist=None,uuid=None):
 
 @streamlit.cache(allow_output_mutation=True)
 def make_plot(embed):
-    embed_df=embed.reset_index()
+    embed_df = embed.reset_index()
     chart = alt.Chart(embed_df).mark_circle().encode(
         x=alt.X('d1', axis=None),
         y=alt.Y('d2', axis=None),
-        tooltip=["text"]
+        tooltip=["text", "labels"]
     ).interactive().properties(width=400, height=400, title='').configure_view(strokeOpacity=0).configure_mark(color='#3341F6')
     return chart
 
 
-def suggest_clusters(embset,algo):
+def suggest_clusters(embset, algo):
     embed = cluster(algo, embset)
     return embed
 
+
 def suggestion_chart(embed):
-    
+
     chart = alt.Chart(embed).mark_circle().encode(
         x=alt.X('d1', axis=None),
         y=alt.Y('d2', axis=None),
@@ -47,14 +49,12 @@ def suggestion_chart(embed):
 
 
 @streamlit.cache(allow_output_mutation=True)
-def make_interactive_plot(embset):
-    df = embset.copy().reset_index()
-    plot = figure(tools="lasso_select,zoom_in,zoom_out",
-                  plot_width=400, plot_height=400)
+def make_interactive_plot(embset, show_labeled):
 
-    plot.axis.visible = False
-
-    cds_lasso = ColumnDataSource(df)
+    if show_labeled:
+        cds_lasso = ColumnDataSource(embset)
+    else:
+        cds_lasso = ColumnDataSource(embset[embset.labels == 'None'])
     cds_lasso.selected.js_on_change(
         "indices",
         CustomJS(
@@ -66,10 +66,24 @@ def make_interactive_plot(embset):
         """
         )
     )
+    TOOLTIPS = [
+        ("text", "@text"),
+    ]
+
+    plot = figure(tools="lasso_select,zoom_in,zoom_out",
+                  plot_width=400, plot_height=400, tooltips=TOOLTIPS)
+
+    plot.xgrid.grid_line_color = None
+    plot.ygrid.grid_line_color = None
+    plot.outline_line_color = None
+
+    plot.axis.visible = False
     plot.circle("d1", "d2", source=cds_lasso,
                 color='#3341F6', size=6, fill_alpha=0.7)
 
-    return plot, df
+    return plot
+
 
 def clear_cache():
-    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*") if (f.is_file() and not os.path.basename(f).startswith('.git'))]
+    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*")
+     if (f.is_file() and not os.path.basename(f).startswith('.git'))]

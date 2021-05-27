@@ -1,14 +1,6 @@
 
 import streamlit
-import os
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import datasets
-import pathlib
-from streamlit.uploaded_file_manager import UploadedFile
-import tensorflow as tf
-import tensorflow_hub
+
 from bulk_labelling.custom_whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
 from bulk_labelling.custom_whatlies.language import TFHubLanguage
 from bulk_labelling.custom_whatlies.embedding import Embedding
@@ -29,8 +21,9 @@ def get_embedding(vec, text):
 def get_embeddingset(veclist, textlist):
     return EmbeddingSet(*[get_embedding(veclist[q], textlist[q]) for q in range(len(textlist))])
 
+
 @streamlit.cache(allow_output_mutation=True)
-def get_language_array(lang, textlist=None,uuid=None):
+def get_language_array(lang, textlist=None, uuid=None):
     if isinstance(lang, EmbeddingSet):
         return lang.to_names_X()[1], lang.to_names_X()[0]
     if isinstance(lang, SentenceTransformer):
@@ -39,13 +32,14 @@ def get_language_array(lang, textlist=None,uuid=None):
     else:
         return lang[textlist].to_names_X()[1], lang[textlist].to_names_X()[0]
 
-def cluster(algo,embset):
-    transformed=embset[['d1','d2']].values
-    
+
+def cluster(algo, embset):
+    transformed = embset[['d1', 'd2']].values
+
     clustering = algo.fit(transformed)
 
     labels = clustering.labels_
-    embed=embset.copy()
+    embed = embset.copy()
     embed['labels'] = labels
-    embed['labels']=embed['labels'].astype(str)
+    embed['labels'] = embed['labels'].astype(str)
     return embed
