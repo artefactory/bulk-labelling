@@ -13,6 +13,7 @@ from preshed.maps import PreshMap
 from cymem.cymem import Pool
 import uuid
 from bulk_labelling.embedding import get_embeddingset, get_language_array
+import os
 
 
 @streamlit.cache

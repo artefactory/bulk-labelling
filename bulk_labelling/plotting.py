@@ -6,6 +6,7 @@ import pathlib
 from bulk_labelling.embedding import get_embeddingset, get_language_array, cluster
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, CustomJS
+from bokeh.io import export, export_png
 # from sklearn.cluster import OPTICS, DBSCAN, MeanShift, estimate_bandwidth
 import altair as alt
 import os
@@ -70,6 +71,9 @@ def make_interactive_plot(embset, show_labeled):
         ("text", "@text"),
     ]
 
+    # streamlit.write(cds_lasso.data)
+    # streamlit.write(embset[embset.labels=='None'])
+
     plot = figure(tools="lasso_select,zoom_in,zoom_out",
                   plot_width=400, plot_height=400, tooltips=TOOLTIPS)
 
@@ -78,8 +82,11 @@ def make_interactive_plot(embset, show_labeled):
     plot.outline_line_color = None
 
     plot.axis.visible = False
+
     plot.circle("d1", "d2", source=cds_lasso,
                 color='#3341F6', size=6, fill_alpha=0.7)
+
+    
 
     return plot
 

@@ -11,6 +11,7 @@ from preshed.maps import PreshMap
 from cymem.cymem import Pool
 import json
 from streamlit_bokeh_events import streamlit_bokeh_events
+from bokeh.io import export_png
 
 from bulk_labelling.load_config import load_languages, load_transformer, load_dataset, load_config
 from bulk_labelling.embedding import get_embedding, get_embeddingset, get_language_array
@@ -130,45 +131,46 @@ def write():
             embedding_df['labels'] = 'None'
             embedding_df.to_csv(
                 'data/plotting_data/cache/cache.csv', index=False)
-
+    
     if column_name != '-':
         if embedding_df is not None:
+            try:
+                if graph_type == 'Interactive labeling':
+                    
 
-            if graph_type == 'Interactive labeling':
-
-                plot = make_interactive_plot(embedding_df, show_labeled)
-                with chart_container:
-                    result_lasso = streamlit_bokeh_events(
-                        bokeh_plot=plot,
-                        events="LASSO_SELECT",
-                        key="bar",
-                        refresh_on_update=True,
-                        debounce_time=10)
-
-                    if result_lasso:
-                        if result_lasso.get("LASSO_SELECT"):
-                            selected_data = embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
-                                "data"]]
-                            info_container.info(
-                                f'selected {len(selected_data)} rows')
-                            name_select_value = name_select.text_input(
-                                'Input selected data label')
-                            click_clear = click_clear_container.button(
-                                'clear label')
-                            if click_clear:
+                    plot = make_interactive_plot(embedding_df, show_labeled)
+                    
+                    
+                    with chart_container:
+                        result_lasso = streamlit_bokeh_events(
+                            bokeh_plot=plot,
+                            events="LASSO_SELECT",
+                            key="hello",
+                            refresh_on_update=True,
+                            debounce_time=1)                        
+                        if result_lasso:
+                            if result_lasso.get("LASSO_SELECT"):
+                                selected_data = embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
+                                    "data"]]
+                                info_container.info(
+                                    f'selected {len(selected_data)} rows')
                                 name_select_value = name_select.text_input(
-                                    'Input selected data label', value='', key=1)
-                            if name_select_value:
-                                selected_data['labels'] = name_select_value
-                                embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
-                                    "data"]] = selected_data
-                                embedding_df.to_csv(
-                                    'data/plotting_data/cache/cache.csv', index=False)
+                                    'Input selected data label')
+                                click_clear = click_clear_container.button(
+                                    'clear label')
+                                if click_clear:
+                                    name_select_value = name_select.text_input(
+                                        'Input selected data label', value='', key=1)
+                                if name_select_value:
+                                    selected_data['labels'] = name_select_value
+                                    embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
+                                        "data"]] = selected_data
+                                    embedding_df.to_csv(
+                                        'data/plotting_data/cache/cache.csv', index=False)
 
-                            dataview_container.write(selected_data)
-
-            if graph_type == 'Classic viz':
-                plain_plot.write(embedding_df, dataset)
+                                dataview_container.write(selected_data)
+            except Exception as error:
+                streamlit.write(error)
 
             if graph_type == 'cluster suggestion':
                 cluster_suggestion.write(embedding_df)
