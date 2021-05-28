@@ -16,6 +16,11 @@ At this point, there might be an installation error concerning the *gensim* libr
 
 At this point, reattempt installation if you did not have MVC14.0 installed. otherwise, you're good to go!
 
+## Installing sample datasets and local models
+
+You don't have quite all the necessary elements yet. If you want to explore sample datasets and use some of the pretrained models included in the repo, you'll have to run an additional bash script by shelling :
+
+```bash install.sh```
 ## Launching and labelling your first dataset
 
 to launch the app, simply shell:

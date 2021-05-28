@@ -10,6 +10,10 @@ from bokeh.io import export, export_png
 # from sklearn.cluster import OPTICS, DBSCAN, MeanShift, estimate_bandwidth
 import altair as alt
 import os
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+from spacy.lang.fr.stop_words import STOP_WORDS as fr_stop
+from spacy.lang.en.stop_words import STOP_WORDS as en_stop
 
 
 @streamlit.cache
@@ -75,7 +79,7 @@ def make_interactive_plot(embset, show_labeled):
     # streamlit.write(embset[embset.labels=='None'])
 
     plot = figure(tools="lasso_select,zoom_in,zoom_out",
-                  plot_width=400, plot_height=400, tooltips=TOOLTIPS)
+                  plot_width=370, plot_height=400, tooltips=TOOLTIPS)
 
     plot.xgrid.grid_line_color = None
     plot.ygrid.grid_line_color = None
@@ -94,3 +98,9 @@ def make_interactive_plot(embset, show_labeled):
 def clear_cache():
     [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*")
      if (f.is_file() and not os.path.basename(f).startswith('.git'))]
+
+def generate_wordcloud(textlist):
+    bigtext=" ".join(textlist)
+    stopwords_list = list(fr_stop) + list(en_stop) + ['Très','Super','bien','bon']
+    wordcloud = WordCloud(stopwords=stopwords_list, background_color="white",colormap='Blues').generate(bigtext.lower())
+    return wordcloud
