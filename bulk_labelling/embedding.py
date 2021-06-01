@@ -40,6 +40,7 @@ def cluster(algo, embset):
 
     labels = clustering.labels_
     embed = embset.copy()
-    embed['labels'] = labels
-    embed['labels'] = embed['labels'].astype(str)
+    embed['cluster'] = labels
+    embed['cluster'] = embed['cluster'].astype(str)
     return embed
+    
