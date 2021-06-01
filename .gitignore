@@ -81,6 +81,7 @@ target/
 /data/plotting_data/*
 
 !/data/datasets/.gitkeep
+!/data/datasets/.Bazaarvoice_test.csv
 !/data/labeled_data/.gitkeep
 !/data/models/.gitkeep
 !/data/plotting_data/.gitkeep

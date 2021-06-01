@@ -1,36 +1,24 @@
 
-from datasets import dataset_dict
-from sklearn import cluster
+from numpy.lib.function_base import select
 import streamlit
 import os
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import datasets
-import pathlib
-from streamlit.uploaded_file_manager import UploadedFile
-import tensorflow as tf
-import tensorflow_hub
-from whatlies import language
-from whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
-from whatlies.language import TFHubLanguage
-from whatlies import Embedding, EmbeddingSet
-from whatlies.transformers import Pca, Umap, Tsne, Lda
-from sentence_transformers import SentenceTransformer
+from bulk_labelling.custom_whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
+from bulk_labelling.custom_whatlies.language import TFHubLanguage
+from bulk_labelling.custom_whatlies.embedding import Embedding
+from bulk_labelling.custom_whatlies.embeddingset import EmbeddingSet
+from bulk_labelling.custom_whatlies.transformers import Pca, Umap, Tsne
 from preshed.maps import PreshMap
 from cymem.cymem import Pool
 import json
-from hulearn.preprocessing import InteractivePreprocessor
 from streamlit_bokeh_events import streamlit_bokeh_events
-from bokeh.models import DataTable, TableColumn, ColumnDataSource, CustomJS
-from sklearn.cluster import OPTICS
-
+import matplotlib.pyplot as plt
 
 
 from bulk_labelling.load_config import load_languages, load_transformer, load_dataset, load_config
 from bulk_labelling.embedding import get_embedding, get_embeddingset, get_language_array
-from bulk_labelling.plotting import prepare_data, make_plot, make_interactive_plot, suggest_clusters,clear_cache
-
+from bulk_labelling.compute_to_cache import compute_to_cache
+from bulk_labelling.plotting import prepare_data, make_plot, make_interactive_plot, suggest_clusters, clear_cache, generate_wordcloud, replace_labels
 from bulk_labelling.pages import plain_plot, cluster_suggestion
 
 
@@ -41,29 +29,36 @@ def write():
     streamlit.sidebar.title('Bulk labelling')
     dataset_upload = streamlit.sidebar.beta_expander('1. Select your dataset')
 
-    available_datasets = ['-']+[i for i in os.listdir('data/datasets') if '.csv' in i]
-    option = dataset_upload.selectbox('Dataset:', available_datasets, index=0)
+    option_box = dataset_upload.empty()
 
     dataset = None
     dataframe_preview = dataset_upload.empty()
     uploaded_file = dataset_upload.file_uploader("Add a custom dataset")
-    uploaded_file_name = dataset_upload.text_input("Custom dataset name")
+    uploaded_file_name = dataset_upload.text_input(
+        "Custom dataset name", value='')
+
+    if (uploaded_file is not None):
+        uploaded_dataset = pd.read_csv(uploaded_file)
+        dataset = uploaded_dataset.copy()
+        if uploaded_file_name != '':
+            uploaded_dataset.to_csv(
+                'data/datasets/{}.csv'.format(uploaded_file_name), index=False)
+
+    available_datasets = datasets_dict + \
+        [i for i in os.listdir('data/datasets') if '.csv' in i]
+    option = option_box.selectbox('Dataset:', available_datasets, index=0)
     dataset = load_dataset(option, datasets_dict)
+
     try:
         dataframe_preview.dataframe(dataset.head())
     except Exception:
         pass
 
-    if (uploaded_file is not None) and (uploaded_file_name is not None):
-        uploaded_dataset = pd.read_csv(uploaded_file)
-        uploaded_dataset.to_csv(
-            'data/datasets/{}.csv'.format(uploaded_file_name), index=False)
-
-    # interactive = streamlit.sidebar.checkbox('Draw interactive chart')
-    # suggest_clusters = streamlit.sidebar.checkbox('Suggest clusters')
+    column_select = streamlit.sidebar.beta_expander(
+        '2. Select column for analysis')
 
     embedding = streamlit.sidebar.beta_expander(
-        "2. Select your embedding framework")
+        "3. Select your embedding framework")
     embedding_lang_select = embedding.beta_container()
     embedding_lang = embedding.beta_container()
     languages_embedding = embedding_lang_select.multiselect('Embedding framework languages', [
@@ -71,32 +66,40 @@ def write():
     embedding_language = embedding_lang.selectbox(
         'Embedding framework', Embedding_frameworks_dataframe[Embedding_frameworks_dataframe.language.isin(languages_embedding)].framework.tolist())
 
-    map = streamlit.sidebar.beta_expander("3. Select your DR algorithm")
+    map = streamlit.sidebar.beta_expander("4. Dimension reduction algorithm")
     transformer_option = map.selectbox(
         'Dimension reduction framework', ('TSNE', 'PCA', 'Umap'))
 
-    chart_container, options_container = streamlit.beta_columns(2)
+    big_container = streamlit.beta_container()
+    wordcloud_container = streamlit.beta_container()
+    chart_container_over, options_container = big_container.beta_columns(2)
+    chart_container = chart_container_over.empty()
     info_container = options_container.empty()
     dataview_container = options_container.empty()
     name_select = options_container.empty()
-    name_clear = options_container.empty()
+    click_clear_container = options_container.empty()
 
     plot = None
-    df = None
     column_name = '-'
     embedding_df = None
+    # result_lasso = None
 
-    column_select = streamlit.sidebar.beta_expander(
-        '4. Select column for analysis')
+    cluster_suggestion_sidebar = streamlit.sidebar.beta_expander(
+        '5. Cluster suggestion')
 
-    graph_type = streamlit.sidebar.radio("How would you like to display the graph?",
-                                         ('Classic viz', 'Interactive labeling', 'cluster suggestion'))
+    suggest_clusters = cluster_suggestion_sidebar.checkbox('Suggest clusters?')
 
-    space = streamlit.sidebar.beta_container()
+    graph_type = 'Interactive labeling'
+    if suggest_clusters:
+        graph_type = 'cluster suggestion'
 
-    validate = streamlit.sidebar.checkbox('refresh plot')
+    space = streamlit.sidebar.text('')
+    compute = streamlit.sidebar.button('compute embeddings')
+    if graph_type == 'Interactive labeling':
+        show_labeled = streamlit.sidebar.checkbox('show labeled data')
 
     clear_cache_button = streamlit.sidebar.button('clear cache')
+    clear_labels_button = streamlit.sidebar.button('clear labels')
 
     if clear_cache_button:
         clear_cache()
@@ -105,76 +108,132 @@ def write():
         column_name = column_select.selectbox(
             'columns', options=['-'] + dataset.columns.tolist())
 
-    if validate and column_name != '-':
+    if column_name != '-':
 
-        if ('cache.json' not in os.listdir('data/plotting_data/cache')):
-            lang = load_languages(embedding_language, languages_dict)
-            transformer = load_transformer(
-                transformer_option, transformers_dict)
-            textlist = dataset[column_name].astype(str).tolist()
-            embset = prepare_data(lang, transformer, textlist)
-            embedding_df = embset.to_dataframe().reset_index()
-            embedding_df['labelling_uuid']=dataset.labelling_uuid
-            embedding_df.to_csv('data/plotting_data/cache/cache.csv', index=False)
-            json_cache = {'dataset': option, 'column': column_name,
-                          'language_model': embedding_language, 'reduction_algorithm': transformer_option}
-            with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
-                json.dump(json_cache, f, ensure_ascii=False, indent=4)
+        if ('cache.json' not in os.listdir('data/plotting_data/cache')) and compute:
+            embedding_df = compute_to_cache(
+                embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name)
 
-        if ('cache.json' in os.listdir('data/plotting_data/cache')):
+        if ('cache.json' in os.listdir('data/plotting_data/cache')) and compute:
+
             f = open('data/plotting_data/cache/cache.json')
             cached_data = json.load(f)
             json_cache = {'dataset': option, 'column': column_name,
                           'language_model': embedding_language, 'reduction_algorithm': transformer_option}
             if cached_data != json_cache:
-                lang = load_languages(embedding_language, languages_dict)
-                transformer = load_transformer(
-                    transformer_option, transformers_dict)
-                textlist = dataset[column_name].astype(str).tolist()
-                embset = prepare_data(lang, transformer, textlist)
-                embedding_df = embset.to_dataframe().reset_index()
-                embedding_df['labelling_uuid']=dataset.labelling_uuid
-                embedding_df.to_csv(
-                    'data/plotting_data/cache/cache.csv', index=False)
-                json_cache = {'dataset': option, 'column': column_name,
-                              'language_model': embedding_language, 'reduction_algorithm': transformer_option}
-                with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
-                    json.dump(json_cache, f, ensure_ascii=False, indent=4)
+                embedding_df = compute_to_cache(
+                    embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name)
             else:
-                embedding_df = pd.read_csv('data/plotting_data/cache/cache.csv')
-        embedding_df = embedding_df.rename(columns={
-                                           embedding_df.columns[0]: 'text', embedding_df.columns[1]: 'd1', embedding_df.columns[2]: 'd2'})
-        if 'labels' not in embedding_df.columns:
-            embedding_df['labels'] = ''
+                embedding_df = pd.read_csv(
+                    'data/plotting_data/cache/cache.csv')
+
+        else:
+            try:
+                embedding_df = pd.read_csv(
+                    'data/plotting_data/cache/cache.csv')
+            except:
+                pass
+
         if embedding_df is not None:
 
-            if graph_type == 'Interactive labeling':
+            embedding_df = embedding_df.rename(columns={
+                embedding_df.columns[0]: 'text', embedding_df.columns[1]: 'd1', embedding_df.columns[2]: 'd2'})
 
-                plot, df = make_interactive_plot(embedding_df)
-                with chart_container:
-                    result_lasso = streamlit_bokeh_events(
-                        bokeh_plot=plot,
-                        events="LASSO_SELECT",
-                        key="bar",
-                        refresh_on_update=True,
-                        debounce_time=10)
+            if 'labels' not in embedding_df.columns or clear_labels_button:
+                embedding_df['labels'] = 'None'
+                embedding_df.to_csv(
+                    'data/plotting_data/cache/cache.csv', index=False)
+    try:
+        if column_name != '-':
+            if embedding_df is not None:
+                try:
+                    if graph_type == 'Interactive labeling':
 
-                    if result_lasso:
-                        if result_lasso.get("LASSO_SELECT"):
-                            selected_data = df.iloc[result_lasso.get("LASSO_SELECT")[
-                                "data"]]
-                            info_container.info(
-                                f'selected {len(selected_data)} rows')
-                            dataview_container.write(selected_data.text)
-                            name_select_value = name_select.text_input(
-                                'Input selected data label')
-                            if name_select_value:
-                                selected_data['labels'] = name_select_value
-                                selected_data.to_csv(
-                                    'data/labeled_data/test_data.csv', encoding='utf-8', index=False)
+                        if show_labeled:
+                            temp_embedding_df = embedding_df.copy()
+                        else:
+                            temp_embedding_df = embedding_df[embedding_df.labels == 'None'].copy(
+                            )
 
-            if graph_type == 'Classic viz':
-                plain_plot.write(embedding_df, dataset)
 
-            if graph_type == 'cluster suggestion':
-                cluster_suggestion.write(embedding_df)
+                        plot = make_interactive_plot(
+                            temp_embedding_df)
+
+                        with chart_container:
+                            result_lasso = streamlit_bokeh_events(
+                                bokeh_plot=plot,
+                                events="LASSO_SELECT",
+                                key="goodbye",
+                                refresh_on_update=True,
+                                debounce_time=1)
+
+                        if result_lasso:
+                            if result_lasso.get("LASSO_SELECT"):
+                                try:
+                                    selected_data = temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
+                                        "data"]]
+                                except:
+                                    selected_data = pd.DataFrame()
+
+                                if len(selected_data != 0):
+                                    info_container.info(
+                                        f'selected {len(selected_data)} rows')
+                                    name_select_value = name_select.text_input(
+                                        'Input selected data label')
+                                    click_clear = click_clear_container.button(
+                                        'clear label')
+                                    if click_clear:
+                                        name_select_value = name_select.text_input(
+                                            'Input selected data label', value='', key=1)
+                                        selected_data = pd.DataFrame()
+
+                                    if name_select_value:
+                                        selected_data['labels'] = name_select_value
+                                        try:
+                                            temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
+                                                "data"]] = selected_data
+                                            embedding_df = replace_labels(
+                                                embedding_df, temp_embedding_df, name_select_value)
+                                            temp_embedding_df = embedding_df[embedding_df.labels == 'None'].copy()
+
+                                        except:
+                                            pass
+
+                                        if not show_labeled:
+                                            plot = make_interactive_plot(
+                                                temp_embedding_df)
+                                            
+
+                                            with chart_container:
+                                                result_lasso = streamlit_bokeh_events(
+                                                    bokeh_plot=plot,
+                                                    events="LASSO_SELECT",
+                                                    key="hello",
+                                                    refresh_on_update=True,
+                                                    debounce_time=1)
+
+                                        embedding_df.to_csv(
+                                            'data/plotting_data/cache/cache.csv', index=False)
+
+                                        # wordcloud = generate_wordcloud(
+                                        #     selected_data.text.tolist())
+                                        # fig, ax = plt.subplots()
+                                        # wordcloud_fig = ax.imshow(
+                                        #     wordcloud, interpolation="bilinear")
+                                        # ax.axis('off')
+                                        # plt.savefig(
+                                        #     'data/plotting_data/cache/wordcloud.png')
+
+                                    dataview_container.dataframe(
+                                        selected_data.head(30), height=150)
+
+                                    # wordcloud_container.image('data/plotting_data/cache/wordcloud.png',use_column_width=True)
+
+                except Exception as error:
+                    streamlit.write(error)
+
+                if graph_type == 'cluster suggestion':
+                    cluster_suggestion.write(embedding_df)
+
+    except:
+        pass

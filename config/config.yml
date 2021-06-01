@@ -16,9 +16,9 @@ transformers_dict:
 
 datasets_dict : 
   - '-'
-  - 'bing_coronavirus_query_set'
-  - 'app_reviews'
-  - 'emotion'
+  # - 'bing_coronavirus_query_set'
+  # - 'app_reviews'
+  # - 'emotion'
 
 embedding_framework:
   framework: 
