@@ -1,3 +1,4 @@
+from bokeh import embed
 from bokeh.models.annotations import Tooltip
 import streamlit
 from bulk_labelling.custom_whatlies.embedding import Embedding
@@ -14,6 +15,9 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 from spacy.lang.fr.stop_words import STOP_WORDS as fr_stop
 from spacy.lang.en.stop_words import STOP_WORDS as en_stop
+import time
+
+
 
 
 @streamlit.cache
@@ -53,13 +57,10 @@ def suggestion_chart(embed):
     return chart
 
 
-@streamlit.cache(allow_output_mutation=True)
-def make_interactive_plot(embset, show_labeled):
+# @streamlit.cache(allow_output_mutation=True)
+def make_interactive_plot(embset):
 
-    if show_labeled:
-        cds_lasso = ColumnDataSource(embset)
-    else:
-        cds_lasso = ColumnDataSource(embset[embset.labels == 'None'])
+    cds_lasso = ColumnDataSource(embset)
     cds_lasso.selected.js_on_change(
         "indices",
         CustomJS(
@@ -90,8 +91,6 @@ def make_interactive_plot(embset, show_labeled):
     plot.circle("d1", "d2", source=cds_lasso,
                 color='#3341F6', size=6, fill_alpha=0.7)
 
-    
-
     return plot
 
 
@@ -99,8 +98,19 @@ def clear_cache():
     [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*")
      if (f.is_file() and not os.path.basename(f).startswith('.git'))]
 
+
 def generate_wordcloud(textlist):
-    bigtext=" ".join(textlist)
-    stopwords_list = list(fr_stop) + list(en_stop) + ['Très','Super','bien','bon']
-    wordcloud = WordCloud(stopwords=stopwords_list, background_color="white",colormap='Blues').generate(bigtext.lower())
+    bigtext = " ".join(textlist)
+    stopwords_list = list(fr_stop) + list(en_stop) + \
+        ['Très', 'Super', 'bien', 'bon']
+    wordcloud = WordCloud(stopwords=stopwords_list, background_color="white",
+                          colormap='Blues').generate(bigtext.lower())
     return wordcloud
+
+
+def replace_labels(embedding_df, temp_embedding_df,label):
+    embedding_df.loc[embedding_df.labelling_uuid.isin(temp_embedding_df[temp_embedding_df.labels!='None'].labelling_uuid),'labels']=label
+    
+    return embedding_df
+
+
