@@ -1,26 +1,16 @@
 
-from numpy.lib.function_base import select
 import streamlit
 import os
 import pandas as pd
-from bulk_labelling.custom_whatlies.language import CountVectorLanguage, UniversalSentenceLanguage, BytePairLanguage, SentenceTFMLanguage, SpacyLanguage
-from bulk_labelling.custom_whatlies.language import TFHubLanguage
-from bulk_labelling.custom_whatlies.embedding import Embedding
-from bulk_labelling.custom_whatlies.embeddingset import EmbeddingSet
-from bulk_labelling.custom_whatlies.transformers import Pca, Umap, Tsne
-from preshed.maps import PreshMap
-from cymem.cymem import Pool
 import json
 from streamlit_bokeh_events import streamlit_bokeh_events
-import matplotlib.pyplot as plt
-import uuid
+import logging
 
 
-from bulk_labelling.load_config import load_languages, load_transformer, load_dataset, load_config
-from bulk_labelling.embedding import get_embedding, get_embeddingset, get_language_array
+from bulk_labelling.load_config import load_dataset, load_config
 from bulk_labelling.compute_to_cache import compute_to_cache
-from bulk_labelling.plotting import prepare_data, make_plot, make_interactive_plot, suggest_clusters, clear_cache, generate_wordcloud, replace_labels, suggestion_chart
-from bulk_labelling.pages import plain_plot, cluster_suggestion
+from bulk_labelling.plotting import make_interactive_plot, clear_cache, generate_wordcloud, replace_labels
+from bulk_labelling.pages import cluster_suggestion
 
 
 def write():
@@ -48,7 +38,7 @@ def write():
     available_datasets = datasets_dict + \
         [i for i in os.listdir('data/datasets') if '.csv' in i]
     option = option_box.selectbox('Dataset:', available_datasets, index=0)
-    dataset = load_dataset(option, datasets_dict)
+    dataset = load_dataset(option)
 
     try:
         dataframe_preview.dataframe(dataset.head())
@@ -83,7 +73,6 @@ def write():
     plot = None
     column_name = '-'
     embedding_df = None
-    # result_lasso = None
     graph_type = 'Interactive labeling'
 
     cluster_suggestion_sidebar = streamlit.sidebar.beta_expander(
@@ -160,123 +149,105 @@ def write():
         if column_name != '-' and embedding_df is not None:
 
             try:
-                if graph_type == 'Interactive labeling':
 
-                    if show_labeled:
-                        temp_embedding_df = embedding_df.copy()
-                    else:
-                        temp_embedding_df = embedding_df[embedding_df.labels == 'None']
+                if show_labeled:
+                    temp_embedding_df = embedding_df.copy()
+                else:
+                    temp_embedding_df = embedding_df[embedding_df.labels == 'None']
 
-                    if not suggest_clusters:
+                if suggest_clusters:
 
-                        plot = make_interactive_plot(
-                            temp_embedding_df)
+                    temp_embedding_df = cluster_suggestion.write(
+                        temp_embedding_df, epsilon, min_samples, min_cluster_size, xi, options_container, xi_value)
 
-                        with chart_container:
-                            result_lasso = streamlit_bokeh_events(
-                                bokeh_plot=plot,
-                                events="LASSO_SELECT",
-                                key="goodbye",
-                                refresh_on_update=True,
-                                debounce_time=1)
-                    else:
+                plot = make_interactive_plot(
+                    temp_embedding_df, suggest_clusters)
+                logging.info('plot has been shown')
 
-                        temp_embedding_df = cluster_suggestion.write(
-                            temp_embedding_df, epsilon, min_samples, min_cluster_size, xi,options_container,xi_value)
 
-                        plot = suggestion_chart(
-                            temp_embedding_df)
 
-                        with chart_container:
-                            result_lasso = streamlit_bokeh_events(
-                                bokeh_plot=plot,
-                                events="LASSO_SELECT",
-                                key="goodbye",
-                                refresh_on_update=True,
-                                debounce_time=1)
 
-                    if result_lasso:
-                        if result_lasso.get("LASSO_SELECT"):
-                            try:
-                                selected_data = temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
-                                    "data"]]
-                            except:
-                                selected_data = pd.DataFrame()
 
-                            if len(selected_data != 0):
-                                info_container.info(
-                                    f'selected {len(selected_data)} rows')
+                with chart_container:
+                    result_lasso = streamlit_bokeh_events(
+                        bokeh_plot=plot,
+                        events="LASSO_SELECT",
+                        key='hello',
+                        refresh_on_update=True,
+                        debounce_time=1)
+
+                if result_lasso:
+                    
+                    if result_lasso.get("LASSO_SELECT"):
+                        try:
+                            selected_data = temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
+                                "data"]]
+                        except:
+                            selected_data = pd.DataFrame()
+                        
+                        if len(selected_data != 0):
+                            info_container.info(
+                                f'selected {len(selected_data)} rows')
+                            name_select_value = name_select.text_input(
+                                'Input selected data label')
+                            click_clear = click_clear_container.button(
+                                'clear label')
+                            if click_clear:
                                 name_select_value = name_select.text_input(
-                                    'Input selected data label')
-                                click_clear = click_clear_container.button(
-                                    'clear label')
-                                if click_clear:
-                                    name_select_value = name_select.text_input(
-                                        'Input selected data label', value='', key=1)
-                                    selected_data = pd.DataFrame()
+                                    'Input selected data label', value='', key=1)
+                                selected_data = pd.DataFrame()
+                                
 
-                                if name_select_value:
-                                    selected_data['labels'] = name_select_value
-                                    try:
-                                        temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
-                                            "data"]] = selected_data
-                                        embedding_df = replace_labels(
-                                            embedding_df, temp_embedding_df, name_select_value)
-                                        temp_embedding_df = embedding_df[embedding_df.labels == 'None']
+                            if name_select_value:
+                                selected_data['labels'] = name_select_value
+                                try:
+                                    temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
+                                        "data"]] = selected_data
+                                    embedding_df = replace_labels(
+                                        embedding_df, temp_embedding_df, name_select_value)
+                                    temp_embedding_df = embedding_df[embedding_df.labels == 'None']
 
-                                    except:
-                                        pass
+                                except:
+                                    pass
 
-                                    if not show_labeled:
-                                        if not suggest_clusters:
-                                            plot = make_interactive_plot(
-                                                temp_embedding_df)
+                                if not show_labeled:
+                                    if suggest_clusters:
 
-                                            with chart_container:
-                                                result_lasso = streamlit_bokeh_events(
-                                                    bokeh_plot=plot,
-                                                    events="LASSO_SELECT",
-                                                    key="hello",
-                                                    refresh_on_update=True,
-                                                    debounce_time=1)
-                                        else:
+                                        temp_embedding_df = cluster_suggestion.write(
+                                            temp_embedding_df, epsilon, min_samples, min_cluster_size, xi, options_container, xi_value)
 
-                                            temp_embedding_df = cluster_suggestion.write(
-                                                temp_embedding_df, epsilon, min_samples, min_cluster_size, xi,options_container,xi_value)
+                                    plot = make_interactive_plot(
+                                        temp_embedding_df, suggest_clusters)
 
-                                            plot = suggestion_chart(
-                                                temp_embedding_df)
+                                    with chart_container:
+                                        result_lasso = streamlit_bokeh_events(
+                                            bokeh_plot=plot,
+                                            events="LASSO_SELECT",
+                                            key='goodbye',
+                                            refresh_on_update=True,
+                                            debounce_time=1)
 
-                                            with chart_container:
-                                                result_lasso = streamlit_bokeh_events(
-                                                    bokeh_plot=plot,
-                                                    events="LASSO_SELECT",
-                                                    key=str(uuid.uuid4()),
-                                                    refresh_on_update=True,
-                                                    debounce_time=1)
+                                embedding_df.to_csv(
+                                    'data/plotting_data/cache/cache.csv', index=False)
 
-                                    embedding_df.to_csv(
-                                        'data/plotting_data/cache/cache.csv', index=False)
-
-                                    # wordcloud = generate_wordcloud(
-                                    #     selected_data.text.tolist())
-                                    # fig, ax = plt.subplots()
-                                    # wordcloud_fig = ax.imshow(
-                                    #     wordcloud, interpolation="bilinear")
-                                    # ax.axis('off')
-                                    # plt.savefig(
-                                    #     'data/plotting_data/cache/wordcloud.png')
-
+                                # wordcloud = generate_wordcloud(
+                                #     selected_data.text.tolist())
+                                # fig, ax = plt.subplots()
+                                # wordcloud_fig = ax.imshow(
+                                #     wordcloud, interpolation="bilinear")
+                                # ax.axis('off')
+                                # plt.savefig(
+                                #     'data/plotting_data/cache/wordcloud.png')
+                            if len(selected_data) != 0:
                                 dataview_container.dataframe(
                                     selected_data.head(30), height=150)
+                            else:
+                                info_container.text('')
 
-                                # wordcloud_container.image('data/plotting_data/cache/wordcloud.png',use_column_width=True)
+                            # wordcloud_container.image('data/plotting_data/cache/wordcloud.png',use_column_width=True)
 
             except Exception as error:
                 streamlit.write(error)
-
-            # if graph_type == 'cluster suggestion':
-            #     cluster_suggestion.write(embedding_df,suggest_clusters_slider)
 
     except:
         pass

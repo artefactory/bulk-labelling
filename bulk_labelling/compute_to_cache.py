@@ -6,6 +6,20 @@ import logging
 
 
 def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name):
+    """wrapper function for the whole computation steps, including writing to cache.
+
+    Args:
+        embedding_language (str): user-chosen language model
+        languages_dict (dict): dictionary of possible language models
+        transformer_option (str): user-chosen transformer
+        transformers_dict (dict): dictionary of possible dimension reduction models
+        dataset (pd.dataFrame()): dataset with data to analyze
+        option (str): dataset name
+        column_name (str): column to analyze
+
+    Returns:
+        pd.DataFrame(): dataframe with encoded-transformed data
+    """
     start = time.time()
     lang = load_languages(embedding_language, languages_dict)
     s1=time.time()
