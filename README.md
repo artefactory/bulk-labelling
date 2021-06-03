@@ -64,3 +64,20 @@ Once these steps are done, you can simply press the compute embeddings button an
 
 ![](readme_media/compute_embeddings.gif)
 
+## Actually labelling
+
+### how to label clusters
+
+Now that you have a nice visualization of your data and you're (hopefully) happy with the cluster separation, it's time to do some actual labelling. you can use the incorporated lasso tool in the UI to select a cluster of points you deem worthy to be labeled and input their label in the text input below. Depending on the state of the "show labeled data" checkbox, upon validation you will see the cluster disapear from the viz. If you want to keep it visible, just check the aforementioned checkbox.
+
+
+![](readme_media/clustering.gif)
+
+Say that you'd like to reset your labelling progress for the whole dataset, or maybe just one cluster. you can do this by clicking the "clear label" button in the sidebar. if you want to clear the cache for computing that might be stochastic in nature and you'd like to re-compute the visualization, you can click the "clear cache" button.
+
+### cluster suggestion
+
+If you're kind of lazy and don't really feel like hovering over a vast amount of points to figure out the structure of your data, we have a small feature that might help: you can ask the app to suggest your own clusters. make a quick choice between which unsupervised clustering algorithm you want, tweak the parameters until you get a satisfactory result, and you're set to label. In the future, we will be implementing more algorithms as well as a potential cluster validation feature that will allow to directly label a cluster with the label suggested by a TFIDF algorithm.
+
+
+![](readme_media/autocluster.gif)
