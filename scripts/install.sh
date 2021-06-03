@@ -2,7 +2,7 @@ echo "Building virtualenv..."
 rm -rf venv
 pip install virtualenv
 python -m virtualenv venv
-source venv/Scripts/activate
+source venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip install -e .
 
