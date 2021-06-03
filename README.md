@@ -26,7 +26,7 @@ to launch the app, simply shell:
 
 ```make app```
 or 
-````streamlit run main_app.py```
+```streamlit run main_app.py```
 
 this will bring you to the landing page of the app.
 
@@ -34,19 +34,33 @@ this will bring you to the landing page of the app.
 
 You can either choose between the sample datasets downloaded with ```make install```, or you can upload your own custom dataset via the file uploader. If you so choose, you can name the uploaded dataset so it can be saved into the cached datasets folder for later use.
 
+![](readme_media/choose_dataset.gif)
+
 ### Selecting the column you want to cluster
 
 Next, simply select the column you want to label from with the dropdown menu in the following beta expander.
+
+
+![](readme_media/choose_column.gif)
 
 ### (Optional) Select the model to be used to compute embeddings
 
 By default, the app computes embeddings with the byte pair language model, a simplistic but rather versatile encoding framework. However, many more models are available with various strengths and weaknesses, and you are free to choose the one you deem most appropriate for your dataset, or play around with them until you get satisfactory results.
 
+
+![](readme_media/choose_model.gif)
+
 ### (Optional) Select the dimension reduction framework to use
 
 To visualize many-featured data, dimension reduction is required. Three models are provided to do this, by default TSNE is chosen, but again, you are free to experiment until you get optimal cluster separation.
 
+
+![](readme_media/choose_dr.gif)
+
 ### Compute embeddings
 
 Once these steps are done, you can simply press the compute embeddings button and wait a short (results may vary) amount of time for your graph to display. Next up, actual labelling and cluster suggestion!
+
+
+![](readme_media/compute_embeddings.gif)
 
