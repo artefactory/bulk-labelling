@@ -15,19 +15,42 @@ from bulk_labelling.pages import cluster_suggestion
 
 def write():
 
-    languages_dict, transformers_dict, datasets_dict, Embedding_frameworks_dataframe = load_config()
+    ###########################
+    #     LOAD CONFIG         #
+    ###########################
 
+    languages_dict, transformers_dict, datasets_dict, Embedding_frameworks_dataframe = load_config()
+    
+    plot = None
+    column_name = '-'
+    embedding_df = None
+
+
+    ##########################
+    #      SIDEBAR           #
+    ##########################
+
+    
     streamlit.sidebar.title('Bulk labelling')
+
+
+
+
+        ##########################
+        #   UPLOADING DATASET    #
+        ##########################
+
     dataset_upload = streamlit.sidebar.beta_expander('1. Select your dataset')
 
     option_box = dataset_upload.empty()
-
-    dataset = None
     dataframe_preview = dataset_upload.empty()
     uploaded_file = dataset_upload.file_uploader("Add a custom dataset")
     uploaded_file_name = dataset_upload.text_input(
         "Custom dataset name", value='')
 
+
+    ## move this to wrapper
+    dataset = None
     if (uploaded_file is not None):
         uploaded_dataset = pd.read_csv(uploaded_file)
         dataset = uploaded_dataset.copy()
@@ -45,8 +68,27 @@ def write():
     except Exception:
         pass
 
+
+
+
+        ##########################
+        #   COLUMN SELECTION     #
+        ##########################
+
     column_select = streamlit.sidebar.beta_expander(
         '2. Select column for analysis')
+    
+    if dataset is not None:
+        column_name = column_select.selectbox(
+            'columns', options=['-'] + dataset.columns.tolist())
+
+
+
+
+
+        ##################################
+        #   LANGUAGE MODEL SELECTION     #
+        ##################################
 
     embedding = streamlit.sidebar.beta_expander(
         "3. Select your embedding framework")
@@ -57,23 +99,25 @@ def write():
     embedding_language = embedding_lang.selectbox(
         'Embedding framework', Embedding_frameworks_dataframe[Embedding_frameworks_dataframe.language.isin(languages_embedding)].framework.tolist())
 
+
+
+
+
+        #######################################
+        #   DIMENSION REDUCTION SELECTION     #
+        #######################################
+
     map = streamlit.sidebar.beta_expander("4. Dimension reduction algorithm")
     transformer_option = map.selectbox(
         'Dimension reduction framework', ('TSNE', 'PCA', 'Umap'))
 
-    big_container = streamlit.beta_container()
-    wordcloud_container = streamlit.beta_container()
-    chart_container_over, options_container = big_container.beta_columns(2)
-    chart_container = chart_container_over.empty()
-    info_container = options_container.empty()
-    dataview_container = options_container.empty()
-    name_select = options_container.empty()
-    click_clear_container = options_container.empty()
 
-    plot = None
-    column_name = '-'
-    embedding_df = None
-    graph_type = 'Interactive labeling'
+
+
+
+        #######################################
+        #           CLUSTER SUGGESTION        #
+        #######################################
 
     cluster_suggestion_sidebar = streamlit.sidebar.beta_expander(
         '5. Cluster suggestion')
@@ -95,20 +139,41 @@ def write():
         else:
             xi_value = 0.01
 
+
+        ##############################
+        #       VARIOUS BUTTONS      #
+        ##############################
+
     space = streamlit.sidebar.text('')
     compute = streamlit.sidebar.button('compute embeddings')
-    if graph_type == 'Interactive labeling':
-        show_labeled = streamlit.sidebar.checkbox('show labeled data')
-
+    show_labeled = streamlit.sidebar.checkbox('show labeled data')
     clear_cache_button = streamlit.sidebar.button('clear cache')
     clear_labels_button = streamlit.sidebar.button('clear labels')
 
     if clear_cache_button:
         clear_cache()
 
-    if dataset is not None:
-        column_name = column_select.selectbox(
-            'columns', options=['-'] + dataset.columns.tolist())
+
+
+
+
+    ##########################
+    #   PAGE STRUCTURE       #
+    ##########################
+
+
+    big_container = streamlit.beta_container()
+    wordcloud_container = streamlit.beta_container()
+    chart_container_over, options_container = big_container.beta_columns(2)
+    chart_container = chart_container_over.empty()
+    info_container = options_container.empty()
+    dataview_container = options_container.empty()
+    name_select = options_container.empty()
+    click_clear_container = options_container.empty()
+
+    #####################################
+    #       COMPUTING AND DISPLAY       #
+    #####################################
 
     if column_name != '-':
 
