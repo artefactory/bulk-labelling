@@ -13,6 +13,7 @@ from cymem.cymem import Pool
 import json
 from streamlit_bokeh_events import streamlit_bokeh_events
 import matplotlib.pyplot as plt
+import uuid
 
 
 from bulk_labelling.load_config import load_languages, load_transformer, load_dataset, load_config
@@ -90,6 +91,20 @@ def write():
 
     suggest_clusters = cluster_suggestion_sidebar.checkbox('Suggest clusters?')
     suggest_clusters_slider = cluster_suggestion_sidebar.beta_container()
+    if suggest_clusters:
+        xi = suggest_clusters_slider.checkbox(
+            'use xi method')
+        epsilon = suggest_clusters_slider.slider(
+            'epsilon', 0.0, 10.0, 4.0, 0.1)
+        min_samples = suggest_clusters_slider.slider(
+            'min_samples', 1, 100, 50, 1)
+        min_cluster_size = suggest_clusters_slider.slider(
+            'min_cluster_size', 1, 100, 30, 1)
+        if xi:
+            xi_value = suggest_clusters_slider.slider(
+                'xi value', 0.0, 1.0, 0.05, 0.01)
+        else:
+            xi_value = 0.01
 
     space = streamlit.sidebar.text('')
     compute = streamlit.sidebar.button('compute embeddings')
@@ -146,14 +161,14 @@ def write():
 
             try:
                 if graph_type == 'Interactive labeling':
-                    
+
                     if show_labeled:
                         temp_embedding_df = embedding_df.copy()
                     else:
                         temp_embedding_df = embedding_df[embedding_df.labels == 'None']
 
                     if not suggest_clusters:
-                        
+
                         plot = make_interactive_plot(
                             temp_embedding_df)
 
@@ -165,10 +180,9 @@ def write():
                                 refresh_on_update=True,
                                 debounce_time=1)
                     else:
-                        
+
                         temp_embedding_df = cluster_suggestion.write(
-                            temp_embedding_df, suggest_clusters_slider)
-                        
+                            temp_embedding_df, epsilon, min_samples, min_cluster_size, xi,options_container,xi_value)
 
                         plot = suggestion_chart(
                             temp_embedding_df)
@@ -226,9 +240,10 @@ def write():
                                                     refresh_on_update=True,
                                                     debounce_time=1)
                                         else:
+
                                             temp_embedding_df = cluster_suggestion.write(
-                                                temp_embedding_df, suggest_clusters_slider)
-                                            
+                                                temp_embedding_df, epsilon, min_samples, min_cluster_size, xi,options_container,xi_value)
+
                                             plot = suggestion_chart(
                                                 temp_embedding_df)
 
@@ -236,7 +251,7 @@ def write():
                                                 result_lasso = streamlit_bokeh_events(
                                                     bokeh_plot=plot,
                                                     events="LASSO_SELECT",
-                                                    key="goodbye",
+                                                    key=str(uuid.uuid4()),
                                                     refresh_on_update=True,
                                                     debounce_time=1)
 
