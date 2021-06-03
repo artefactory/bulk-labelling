@@ -8,3 +8,4 @@ python -m pip install -e .
 
 bash ./scripts/download_models.sh
 bash ./scripts/download_sample_data.sh
+mkdir data/plotting_data/cache

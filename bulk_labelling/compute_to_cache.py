@@ -19,6 +19,7 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
     embedding_df['labelling_uuid'] = dataset.labelling_uuid
     embedding_df.to_csv(
         'data/plotting_data/cache/cache.csv', index=False)
+
     json_cache = {'dataset': option, 'column': column_name,
                   'language_model': embedding_language, 'reduction_algorithm': transformer_option}
     with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
