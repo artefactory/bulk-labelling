@@ -161,8 +161,10 @@ def write():
     #   PAGE STRUCTURE       #
     ##########################
 
-
+    
     big_container = streamlit.beta_container()
+    progress_indicator=big_container.beta_container()
+    progress_bar=progress_indicator.empty()
     wordcloud_container = streamlit.beta_container()
     chart_container_over, options_container = big_container.beta_columns(2)
     chart_container = chart_container_over.empty()
@@ -178,9 +180,12 @@ def write():
     if column_name != '-':
 
         if ('cache.json' not in os.listdir('data/plotting_data/cache')) and compute:
-            embedding_df = compute_to_cache(
-                embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name)
-
+            my_bar=progress_bar.progress(0)
+            with streamlit.spinner('Computing embeddings...'):
+                embedding_df = compute_to_cache(
+                    embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name,my_bar)
+            progress_bar.empty()
+            
         if ('cache.json' in os.listdir('data/plotting_data/cache')) and compute:
 
             f = open('data/plotting_data/cache/cache.json')
@@ -188,8 +193,11 @@ def write():
             json_cache = {'dataset': option, 'column': column_name,
                           'language_model': embedding_language, 'reduction_algorithm': transformer_option}
             if cached_data != json_cache:
-                embedding_df = compute_to_cache(
-                    embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name)
+                my_bar=progress_bar.progress(0)
+                with streamlit.spinner('Computing embeddings...'):
+                    embedding_df = compute_to_cache(
+                        embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name,my_bar)
+                progress_bar.empty()
             else:
                 embedding_df = pd.read_csv(
                     'data/plotting_data/cache/cache.csv')

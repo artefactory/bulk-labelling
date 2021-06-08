@@ -34,7 +34,6 @@ def get_embeddingset(veclist, textlist):
     return EmbeddingSet(*[get_embedding(veclist[q], textlist[q]) for q in range(len(textlist))])
 
 
-@streamlit.cache(allow_output_mutation=True)
 def get_language_array(lang, textlist=None):
     """gets language array with encoding and texts for all possible models as an EmbeddingSet
 

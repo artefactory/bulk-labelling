@@ -3,9 +3,11 @@ from bulk_labelling.load_config import load_languages, load_transformer
 from bulk_labelling.plotting import prepare_data
 import time
 import logging
+import numpy as np
+import pandas as pd
 
 
-def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name):
+def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name,my_bar):
     """wrapper function for the whole computation steps, including writing to cache.
 
     Args:
@@ -26,10 +28,16 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
     transformer = load_transformer(
         transformer_option, transformers_dict)
     s2=time.time()
-    textlist = dataset[column_name].astype(str).tolist()
-    embset = prepare_data(lang, transformer, textlist)
+    temp_datasets=np.array_split(dataset,100)
+    temp_embsets=[]
+    for k in range(len(temp_datasets)):
+        textlist = temp_datasets[k][column_name].astype(str).tolist()
+        temp_embset = prepare_data(lang, transformer, textlist)
+        my_bar.progress(k/len(temp_datasets))
+        temp_embsets.append(temp_embset.to_dataframe().reset_index())
+    embedding_df=pd.concat(temp_embsets)
     s3=time.time()
-    embedding_df = embset.to_dataframe().reset_index()
+    # embedding_df = embset.to_dataframe().reset_index()
     embedding_df['labelling_uuid'] = dataset.labelling_uuid
     embedding_df.to_csv(
         'data/plotting_data/cache/cache.csv', index=False)

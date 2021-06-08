@@ -12,7 +12,6 @@ import time
 import logging
 
 
-@streamlit.cache
 def prepare_data(lang, transformer, textlist=None):
     """encodes and transforms a list of texts with the models chosen by the user
 
