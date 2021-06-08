@@ -28,13 +28,12 @@ def prepare_data(lang, transformer, textlist=None):
     step1 = time.time()
     embset = get_embeddingset(encoding, texts)
     step2 = time.time()
-    result = embset.transform(transformer)
+    # embset = embset.transform(transformer)
     end = time.time()
     logging.info(f'getting encodings : {step1-start}')
     logging.info(f'getting embeddingset : {step2-step1}')
-    logging.info(f'getting transformation : {end-step2}')
 
-    return result
+    return embset
 
 
 

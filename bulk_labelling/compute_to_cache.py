@@ -1,10 +1,13 @@
 import json
 from bulk_labelling.load_config import load_languages, load_transformer
 from bulk_labelling.plotting import prepare_data
+from bulk_labelling.custom_whatlies import EmbeddingSet
 import time
 import logging
 import numpy as np
 import pandas as pd
+import streamlit
+from bulk_labelling.embedding import get_embeddingset
 
 
 def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name,my_bar):
@@ -29,14 +32,35 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
         transformer_option, transformers_dict)
     s2=time.time()
     temp_datasets=np.array_split(dataset,100)
+
+
+    # textlist=dataset[column_name].astype(str).tolist()
+    # embedding_df=prepare_data(lang,transformer,textlist).to_dataframe().reset_index()
+
     temp_embsets=[]
     for k in range(len(temp_datasets)):
         textlist = temp_datasets[k][column_name].astype(str).tolist()
         temp_embset = prepare_data(lang, transformer, textlist)
         my_bar.progress(k/len(temp_datasets))
-        temp_embsets.append(temp_embset.to_dataframe().reset_index())
-    embedding_df=pd.concat(temp_embsets)
+        # temp_embsets.append(temp_embset.to_dataframe().reset_index())
+        temp_embsets.append(temp_embset)
+
+
+
+    # embedding_df=pd.concat(temp_embsets)
+
+    embarray_texts=[]
+    for k in temp_embsets:
+        embarray_texts+=k.to_names_X()[0]
+    embarray_encoding=np.vstack([k.to_names_X()[1] for k in temp_embsets])
+    
+    embedding_df=get_embeddingset(embarray_encoding,embarray_texts).transform(transformer).to_dataframe().reset_index()
+
     s3=time.time()
+
+
+
+
     # embedding_df = embset.to_dataframe().reset_index()
     embedding_df['labelling_uuid'] = dataset.labelling_uuid
     embedding_df.to_csv(
