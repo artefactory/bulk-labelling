@@ -20,25 +20,20 @@ def write():
     ###########################
 
     languages_dict, transformers_dict, datasets_dict, Embedding_frameworks_dataframe = load_config()
-    
+
     plot = None
     column_name = '-'
     embedding_df = None
-
 
     ##########################
     #      SIDEBAR           #
     ##########################
 
-    
     streamlit.sidebar.title('Bulk labelling')
 
-
-
-
-        ##########################
-        #   UPLOADING DATASET    #
-        ##########################
+    ##########################
+    #   UPLOADING DATASET    #
+    ##########################
 
     dataset_upload = streamlit.sidebar.beta_expander('1. Select your dataset')
 
@@ -48,8 +43,7 @@ def write():
     uploaded_file_name = dataset_upload.text_input(
         "Custom dataset name", value='')
 
-
-    ## move this to wrapper
+    # move this to wrapper
     dataset = None
     if (uploaded_file is not None):
         uploaded_dataset = pd.read_csv(uploaded_file)
@@ -68,23 +62,21 @@ def write():
     except Exception:
         pass
 
-
-
-
         ##########################
         #   COLUMN SELECTION     #
         ##########################
 
     column_select = streamlit.sidebar.beta_expander(
         '2. Select column for analysis')
-    
+
     if dataset is not None:
         column_name = column_select.selectbox(
             'columns', options=['-'] + dataset.columns.tolist())
-
-
-
-
+        sample_data = column_select.checkbox('Sample a smaller dataset')
+        column_select.info(
+            'One would sample the dataset to speed up calculations for a pre-labelling exploration phase')
+        if sample_data:
+            dataset = dataset.sample(n=1000)
 
         ##################################
         #   LANGUAGE MODEL SELECTION     #
@@ -99,25 +91,17 @@ def write():
     embedding_language = embedding_lang.selectbox(
         'Embedding framework', Embedding_frameworks_dataframe[Embedding_frameworks_dataframe.language.isin(languages_embedding)].framework.tolist())
 
-
-
-
-
-        #######################################
-        #   DIMENSION REDUCTION SELECTION     #
-        #######################################
+    #######################################
+    #   DIMENSION REDUCTION SELECTION     #
+    #######################################
 
     map = streamlit.sidebar.beta_expander("4. Dimension reduction algorithm")
     transformer_option = map.selectbox(
         'Dimension reduction framework', ('TSNE', 'PCA', 'Umap'))
 
-
-
-
-
-        #######################################
-        #           CLUSTER SUGGESTION        #
-        #######################################
+    #######################################
+    #           CLUSTER SUGGESTION        #
+    #######################################
 
     cluster_suggestion_sidebar = streamlit.sidebar.beta_expander(
         '5. Cluster suggestion')
@@ -139,7 +123,6 @@ def write():
         else:
             xi_value = 0.01
 
-
         ##############################
         #       VARIOUS BUTTONS      #
         ##############################
@@ -153,18 +136,13 @@ def write():
     if clear_cache_button:
         clear_cache()
 
-
-
-
-
     ##########################
     #   PAGE STRUCTURE       #
     ##########################
 
-    
     big_container = streamlit.beta_container()
-    progress_indicator=big_container.beta_container()
-    progress_bar=progress_indicator.empty()
+    progress_indicator = big_container.beta_container()
+    progress_bar = progress_indicator.empty()
     wordcloud_container = streamlit.beta_container()
     chart_container_over, options_container = big_container.beta_columns(2)
     chart_container = chart_container_over.empty()
@@ -180,23 +158,39 @@ def write():
     if column_name != '-':
 
         if ('cache.json' not in os.listdir('data/plotting_data/cache')) and compute:
-            my_bar=progress_bar.progress(0)
+            my_bar = progress_bar.progress(0)
             with streamlit.spinner('Computing embeddings...'):
                 embedding_df = compute_to_cache(
-                    embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name,my_bar)
+                    embedding_language,
+                    languages_dict,
+                    transformer_option,
+                    transformers_dict,
+                    dataset,
+                    option,
+                    column_name,
+                    my_bar,
+                    sample_data)
             progress_bar.empty()
-            
+
         if ('cache.json' in os.listdir('data/plotting_data/cache')) and compute:
 
             f = open('data/plotting_data/cache/cache.json')
             cached_data = json.load(f)
             json_cache = {'dataset': option, 'column': column_name,
-                          'language_model': embedding_language, 'reduction_algorithm': transformer_option}
+                          'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled':sample_data}
             if cached_data != json_cache:
-                my_bar=progress_bar.progress(0)
+                my_bar = progress_bar.progress(0)
                 with streamlit.spinner('Computing embeddings...'):
                     embedding_df = compute_to_cache(
-                        embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name,my_bar)
+                        embedding_language,
+                        languages_dict,
+                        transformer_option,
+                        transformers_dict,
+                        dataset,
+                        option,
+                        column_name,
+                        my_bar,
+                        sample_data)
                 progress_bar.empty()
             else:
                 embedding_df = pd.read_csv(
@@ -237,10 +231,6 @@ def write():
                     temp_embedding_df, suggest_clusters)
                 logging.info('plot has been shown')
 
-
-
-
-
                 with chart_container:
                     result_lasso = streamlit_bokeh_events(
                         bokeh_plot=plot,
@@ -250,14 +240,14 @@ def write():
                         debounce_time=1)
 
                 if result_lasso:
-                    
+
                     if result_lasso.get("LASSO_SELECT"):
                         try:
                             selected_data = temp_embedding_df.iloc[result_lasso.get("LASSO_SELECT")[
                                 "data"]]
                         except:
                             selected_data = pd.DataFrame()
-                        
+
                         if len(selected_data != 0):
                             info_container.info(
                                 f'selected {len(selected_data)} rows')
@@ -269,7 +259,6 @@ def write():
                                 name_select_value = name_select.text_input(
                                     'Input selected data label', value='', key=1)
                                 selected_data = pd.DataFrame()
-                                
 
                             if name_select_value:
                                 selected_data['labels'] = name_select_value
