@@ -64,7 +64,7 @@ def make_interactive_plot(embset, cluster):
     ]
 
     plot = figure(tools="lasso_select,zoom_in,zoom_out",
-                  plot_width=370, plot_height=400, tooltips=TOOLTIPS)
+                  plot_width=370, plot_height=400, tooltips=TOOLTIPS,output_backend="webgl")
 
     plot.xgrid.grid_line_color = None
     plot.ygrid.grid_line_color = None

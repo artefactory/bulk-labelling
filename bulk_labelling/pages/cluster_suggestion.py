@@ -1,5 +1,6 @@
 from sklearn.cluster import OPTICS
 from bulk_labelling.embedding import cluster
+import streamlit
 
 
 def write(embset, epsilon, min_samples, min_cluster_size, xi, options_container, xi_value):
@@ -33,5 +34,5 @@ def write(embset, epsilon, min_samples, min_cluster_size, xi, options_container,
         data = df.copy()
         data.cluster = data.cluster.apply(
             lambda x: '1' if x == view_cluster else '0')
-
+    streamlit.write('')
     return data
