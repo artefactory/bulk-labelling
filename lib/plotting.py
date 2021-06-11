@@ -10,6 +10,8 @@ from spacy.lang.fr.stop_words import STOP_WORDS as fr_stop
 from spacy.lang.en.stop_words import STOP_WORDS as en_stop
 import time
 import logging
+from bokeh.palettes import viridis,all_palettes, turbo
+import pandas as pd
 
 
 def prepare_data(lang, transformer, textlist=None):
@@ -64,24 +66,36 @@ def make_interactive_plot(embset, cluster):
     ]
 
     plot = figure(tools="lasso_select,zoom_in,zoom_out",
-                  plot_width=370, plot_height=400, tooltips=TOOLTIPS,output_backend="webgl")
+                  plot_width=370, plot_height=700, tooltips=TOOLTIPS,output_backend="webgl")
 
     plot.xgrid.grid_line_color = None
     plot.ygrid.grid_line_color = None
     plot.outline_line_color = None
+
+
+
+
+
+
+
+
+
 
     plot.axis.visible = False
 
     if cluster:
         CLUSTERS = embset.cluster.unique().tolist()
         plot.circle("d1", "d2", source=cds_lasso,
-                    color=factor_cmap('cluster', 'Category10_3', CLUSTERS), size=6, fill_alpha=0.7)
+                    color=factor_cmap('cluster', 'Category20_20',CLUSTERS), size=6, fill_alpha=0.7)
     else:
+        LABELS = embset.labels.unique().tolist()
+        # plot.circle("d1", "d2", source=cds_lasso,
+        #              color='#3341F6', size=6, fill_alpha=0.7)
         plot.circle("d1", "d2", source=cds_lasso,
-                     color='#3341F6', size=6, fill_alpha=0.7)
+                    color=factor_cmap('labels', ('#3341F6', '#a6d2ff'), LABELS), size=6, fill_alpha=0.7)
 
 
-                     
+
 
     return plot
 
@@ -103,10 +117,13 @@ def generate_wordcloud(textlist):
         wordcloud.Wordcloud: wordcloud generated from the textlist
     """
     bigtext = " ".join(textlist)
+    
     stopwords_list = list(fr_stop) + list(en_stop) + \
         ['Très', 'Super', 'bien', 'bon']
+    
     wordcloud = WordCloud(stopwords=stopwords_list, background_color="white",
-                          colormap='Blues').generate(bigtext.lower())
+                          colormap='Blues',width = 1500, height = 1000).generate(bigtext.lower())
+    
     return wordcloud
 
 
@@ -125,3 +142,10 @@ def replace_labels(embedding_df, temp_embedding_df, label):
         temp_embedding_df[temp_embedding_df.labels != 'None'].labelling_uuid), 'labels'] = label
 
     return embedding_df
+
+def export_cache(dataset_name,path):
+    try:
+        dataset=pd.read_csv('data/plotting_data/cache/cache.csv')
+        dataset.to_csv(path+f'{dataset_name}.csv',index=False)
+    except:
+        pass    

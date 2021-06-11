@@ -5,11 +5,12 @@ import pandas as pd
 import json
 from streamlit_bokeh_events import streamlit_bokeh_events
 import logging
+import matplotlib.pyplot as plt
 
 
 from lib.load_config import load_dataset_from_list,load_dataset, load_config
 from lib.compute_to_cache import compute_to_cache
-from lib.plotting import make_interactive_plot, clear_cache, generate_wordcloud, replace_labels
+from lib.plotting import make_interactive_plot, clear_cache, generate_wordcloud, replace_labels, export_cache
 from lib.pages import cluster_suggestion
 
 
@@ -19,7 +20,7 @@ def write():
     #     LOAD CONFIG         #
     ###########################
 
-    languages_dict, transformers_dict, datasets_dict, Embedding_frameworks_dataframe = load_config()
+    languages_dict, transformers_dict, datasets_dict, Embedding_frameworks_dataframe,save_path = load_config()
 
     plot = None
     column_name = '-'
@@ -133,7 +134,32 @@ def write():
     compute = streamlit.sidebar.button('compute embeddings')
     show_labeled = streamlit.sidebar.checkbox('show labeled data')
     clear_cache_button = streamlit.sidebar.button('clear cache')
-    clear_labels_button = streamlit.sidebar.button('clear labels')
+    clear_labels_button = streamlit.sidebar.button('reset labels')
+
+        ##################################
+        #      EXPORTING DATA            #
+        ##################################
+    
+    export = streamlit.sidebar.beta_expander("6. Export your labeled data")
+    dataset_name_container=export.empty()
+    dataset_name = dataset_name_container.text_input(
+        'enter desired name for file')
+    click_clear_dataset_name = export.button(
+        'clear label',key='export dataset')
+    if click_clear_dataset_name:
+        dataset_name = dataset_name_container.text_input(
+            'enter desired name for file', value='', key='empty dataset name')
+    export.info('Exported data is saved by default to data/labeled_data/your_name.csv. modify this in the config file')
+
+
+
+
+
+
+
+
+
+
 
     if clear_cache_button:
         clear_cache()
@@ -145,9 +171,10 @@ def write():
     big_container = streamlit.beta_container()
     progress_indicator = big_container.beta_container()
     progress_bar = progress_indicator.empty()
-    wordcloud_container = streamlit.beta_container()
+    # wordcloud_container = streamlit.beta_container()
     chart_container_over, options_container = big_container.beta_columns(2)
     chart_container = chart_container_over.empty()
+    wordcloud_container=chart_container_over.empty()
     info_container = options_container.empty()
     dataview_container = options_container.empty()
     name_select = options_container.empty()
@@ -207,6 +234,7 @@ def write():
 
         if embedding_df is not None:
 
+
             embedding_df = embedding_df.rename(columns={
                 embedding_df.columns[0]: 'text', embedding_df.columns[1]: 'd1', embedding_df.columns[2]: 'd2'})
 
@@ -214,6 +242,10 @@ def write():
                 embedding_df['labels'] = 'None'
                 embedding_df.to_csv(
                     'data/plotting_data/cache/cache.csv', index=False)
+            
+            if dataset_name:
+                export_cache(dataset_name,save_path)
+
     try:
         if column_name != '-' and embedding_df is not None:
 
@@ -274,41 +306,45 @@ def write():
                                 except:
                                     pass
 
-                                if not show_labeled:
-                                    if suggest_clusters:
+                                if show_labeled:
+                                    temp_embedding_df = embedding_df.copy()
+                                else:
+                                    temp_embedding_df = embedding_df[embedding_df.labels == 'None']
 
-                                        temp_embedding_df = cluster_suggestion.write(
-                                            temp_embedding_df, epsilon, min_samples, min_cluster_size, xi, options_container, xi_value)
+                                if suggest_clusters:
 
-                                    plot = make_interactive_plot(
-                                        temp_embedding_df, suggest_clusters)
+                                    temp_embedding_df = cluster_suggestion.write(
+                                        temp_embedding_df, epsilon, min_samples, min_cluster_size, xi, options_container, xi_value)
+                                
+                                plot = make_interactive_plot(
+                                    temp_embedding_df, suggest_clusters)
 
-                                    with chart_container:
-                                        result_lasso = streamlit_bokeh_events(
-                                            bokeh_plot=plot,
-                                            events="LASSO_SELECT",
-                                            key='goodbye',
-                                            refresh_on_update=True,
-                                            debounce_time=1)
+                                with chart_container:
+                                    result_lasso = streamlit_bokeh_events(
+                                        bokeh_plot=plot,
+                                        events="LASSO_SELECT",
+                                        key='goodbye',
+                                        refresh_on_update=True,
+                                        debounce_time=1)
 
                                 embedding_df.to_csv(
                                     'data/plotting_data/cache/cache.csv', index=False)
-
-                                # wordcloud = generate_wordcloud(
-                                #     selected_data.text.tolist())
-                                # fig, ax = plt.subplots()
-                                # wordcloud_fig = ax.imshow(
-                                #     wordcloud, interpolation="bilinear")
-                                # ax.axis('off')
-                                # plt.savefig(
-                                #     'data/plotting_data/cache/wordcloud.png')
+                                
+                            wordcloud = generate_wordcloud(
+                                selected_data.text.tolist())
+                            fig, ax = plt.subplots()
+                            wordcloud_fig = ax.imshow(
+                                wordcloud, interpolation="bilinear")
+                            ax.axis('off')
+                            plt.savefig(
+                                'data/plotting_data/wordcloud.png')
                             if len(selected_data) != 0:
                                 dataview_container.dataframe(
                                     selected_data.head(30), height=150)
                             else:
                                 info_container.text('')
 
-                            # wordcloud_container.image('data/plotting_data/cache/wordcloud.png',use_column_width=True)
+                            options_container.image('data/plotting_data/wordcloud.png',use_column_width=True)
 
             except Exception as error:
                 streamlit.write(error)

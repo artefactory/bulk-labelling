@@ -38,3 +38,5 @@ embedding_framework:
     - 'english'
     - 'french'
     - 'french'
+
+save_path: "data/labeled_data/"

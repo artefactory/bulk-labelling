@@ -92,4 +92,4 @@ def load_config():
     result = yaml.load(open('config/config.yml'))
     embedding_framework = pd.DataFrame.from_dict(result['embedding_framework'])
 
-    return result['languages_dict'], result['transformers_dict'], result['datasets_dict'], embedding_framework
+    return result['languages_dict'], result['transformers_dict'], result['datasets_dict'], embedding_framework,result['save_path']
