@@ -1,7 +1,6 @@
 from sklearn.cluster import OPTICS
-from lib.utils.processing import cluster
+from lib.utils.processing import cluster, cluster_tfidf
 import streamlit
-
 
 def write(embset, epsilon, min_samples, min_cluster_size, xi, options_container, xi_value):
     """generates an autocluster suggestion from parameters specified by the user and writes the resulting selectbox to the streamlit page.
@@ -26,6 +25,10 @@ def write(embset, epsilon, min_samples, min_cluster_size, xi, options_container,
                       min_samples=min_samples, min_cluster_size=min_cluster_size)
 
     df = cluster(algo, embset)
+
+    df=cluster_tfidf(df)
+
+
     view_cluster = options_container.selectbox('Select cluster to view:', [
                                                'all']+df.cluster.unique().tolist(), key='selectbox')
     if view_cluster == 'all':
@@ -34,5 +37,4 @@ def write(embset, epsilon, min_samples, min_cluster_size, xi, options_container,
         data = df.copy()
         data.cluster = data.cluster.apply(
             lambda x: '1' if x == view_cluster else '0')
-    streamlit.write('')
     return data

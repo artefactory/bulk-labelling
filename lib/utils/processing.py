@@ -1,8 +1,14 @@
 from spacy.lang.fr.stop_words import STOP_WORDS as fr_stop
 from spacy.lang.en.stop_words import STOP_WORDS as en_stop
+from sklearn.feature_extraction.text import TfidfVectorizer
 import spacy
 # from nltk.tokenize import word_tokenize
 import streamlit
+import numpy as np
+import pandas as pd
+from wordcloud import WordCloud
+from spacy.lang.fr.stop_words import STOP_WORDS as fr_stop
+from spacy.lang.en.stop_words import STOP_WORDS as en_stop
 
 
 def replace_labels(embedding_df, temp_embedding_df, label):
@@ -51,3 +57,19 @@ def remove_stopwords_from_column(Textcolumn, dataset_language):
                                        if not token.is_stop))
 
     return result
+
+def cluster_tfidf(df,language='French'):
+    if language=='English':
+        stopwords_list=en_stop
+    if language == 'French':
+        stopwords_list=fr_stop
+
+    for k in df.cluster.unique():
+        wordcloud = WordCloud(stopwords=stopwords_list, background_color="white",
+                            colormap='Blues',width = 100, height = 100).generate(' '.join(df[df.cluster==k].text.tolist()).lower())
+        top_3 = list(wordcloud.words_.keys())
+        # streamlit.write(df[df.cluster==k])
+        # streamlit.write(f'{top_3[0]},{top_3[1]},{top_3[2]}')
+        df.loc[df.cluster==k,'cluster'] =  f'{top_3[0]} - {top_3[1]} - {top_3[2]}'
+    return df
+    
