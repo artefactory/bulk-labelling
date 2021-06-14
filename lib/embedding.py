@@ -3,6 +3,8 @@ import streamlit
 from lib.custom_whatlies.embedding import Embedding
 from lib.custom_whatlies.embeddingset import EmbeddingSet
 from sentence_transformers import SentenceTransformer
+import logging
+import time
 
 
 @streamlit.cache
@@ -53,20 +55,25 @@ def get_language_array(lang, textlist=None):
         return lang[textlist].to_names_X()[1], lang[textlist].to_names_X()[0]
 
 
-def cluster(algo, embset):
-    """suggests cluster based on provided algo and embedding dataframe
+def prepare_data(lang, transformer, textlist=None):
+    """encodes and transforms a list of texts with the models chosen by the user
 
     Args:
-        algo (sklearn.transformer): clustering algorithm used to cluster data
-        embset (pd.DataFrame): embedding dataframe containing x,y data to cluster
+        lang (huggingface transformer, tfhub language or whatlies language): model used to encode the texts
+        transformer (whatlies transformer): dimension reduction transformer chosn by the user
+        textlist (list, optional): list of texts to encode. Defaults to None.
 
     Returns:
-        pd.dataFrame(): embedding dataframe with cluster suggestion values
+        pd.DataFrame: dataframe containing the texts to encode as well as their n-D transformed encodings
     """
-    transformed = embset[['d1', 'd2']].values
-    clustering = algo.fit(transformed)
-    labels = clustering.labels_
-    embed = embset.copy()
-    embed['cluster'] = labels
-    embed['cluster'] = embed['cluster'].astype(str)
-    return embed
+    start = time.time()
+    encoding, texts = get_language_array(lang, textlist)
+    step1 = time.time()
+    embset = get_embeddingset(encoding, texts)
+    step2 = time.time()
+    # embset = embset.transform(transformer)
+    end = time.time()
+    logging.info(f'getting encodings : {step1-start}')
+    logging.info(f'getting embeddingset : {step2-step1}')
+
+    return embset

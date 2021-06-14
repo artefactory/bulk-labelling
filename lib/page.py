@@ -8,9 +8,10 @@ import logging
 import matplotlib.pyplot as plt
 
 
-from lib.load_config import load_dataset_from_list,load_dataset, load_config
-from lib.compute_to_cache import compute_to_cache
-from lib.plotting import make_interactive_plot, clear_cache, generate_wordcloud, replace_labels, export_cache
+from lib.load_config import load_dataset_from_list, load_dataset, load_config
+from lib.cache import compute_to_cache, export_cache, clear_cache
+from lib.plotting import make_interactive_plot, generate_wordcloud
+from lib.processing import replace_labels
 from lib.pages import cluster_suggestion
 
 
@@ -188,7 +189,27 @@ def write():
 
         if ('cache.json' not in os.listdir('data/plotting_data/cache')) and compute:
             my_bar = progress_bar.progress(0)
-            with streamlit.spinner('Computing embeddings...'):
+            
+            embedding_df = compute_to_cache(
+                embedding_language,
+                languages_dict,
+                transformer_option,
+                transformers_dict,
+                dataset,
+                option,
+                column_name,
+                my_bar,
+                sample_data)
+            progress_bar.success(":heavy_check_mark: Your data is ready!")
+
+        if ('cache.json' in os.listdir('data/plotting_data/cache')) and compute:
+
+            f = open('data/plotting_data/cache/cache.json')
+            cached_data = json.load(f)
+            json_cache = {'dataset': option, 'column': column_name,
+                          'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled':sample_data}
+            if cached_data != json_cache:
+                my_bar = progress_bar.progress(0)
                 embedding_df = compute_to_cache(
                     embedding_language,
                     languages_dict,
@@ -199,28 +220,7 @@ def write():
                     column_name,
                     my_bar,
                     sample_data)
-            progress_bar.empty()
-
-        if ('cache.json' in os.listdir('data/plotting_data/cache')) and compute:
-
-            f = open('data/plotting_data/cache/cache.json')
-            cached_data = json.load(f)
-            json_cache = {'dataset': option, 'column': column_name,
-                          'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled':sample_data}
-            if cached_data != json_cache:
-                my_bar = progress_bar.progress(0)
-                with streamlit.spinner('Computing embeddings...'):
-                    embedding_df = compute_to_cache(
-                        embedding_language,
-                        languages_dict,
-                        transformer_option,
-                        transformers_dict,
-                        dataset,
-                        option,
-                        column_name,
-                        my_bar,
-                        sample_data)
-                progress_bar.empty()
+                progress_bar.success(":heavy_check_mark: Your data is ready!")
             else:
                 embedding_df = pd.read_csv(
                     'data/plotting_data/cache/cache.csv')

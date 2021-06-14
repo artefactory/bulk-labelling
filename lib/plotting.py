@@ -14,28 +14,6 @@ from bokeh.palettes import viridis,all_palettes, turbo
 import pandas as pd
 
 
-def prepare_data(lang, transformer, textlist=None):
-    """encodes and transforms a list of texts with the models chosen by the user
-
-    Args:
-        lang (huggingface transformer, tfhub language or whatlies language): model used to encode the texts
-        transformer (whatlies transformer): dimension reduction transformer chosn by the user
-        textlist (list, optional): list of texts to encode. Defaults to None.
-
-    Returns:
-        pd.DataFrame: dataframe containing the texts to encode as well as their n-D transformed encodings
-    """
-    start = time.time()
-    encoding, texts = get_language_array(lang, textlist)
-    step1 = time.time()
-    embset = get_embeddingset(encoding, texts)
-    step2 = time.time()
-    # embset = embset.transform(transformer)
-    end = time.time()
-    logging.info(f'getting encodings : {step1-start}')
-    logging.info(f'getting embeddingset : {step2-step1}')
-
-    return embset
 
 
 
@@ -100,11 +78,6 @@ def make_interactive_plot(embset, cluster):
     return plot
 
 
-def clear_cache():
-    """clears the handmade cache
-    """
-    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*")
-     if (f.is_file() and not os.path.basename(f).startswith('.git'))]
 
 
 def generate_wordcloud(textlist):
@@ -127,25 +100,4 @@ def generate_wordcloud(textlist):
     return wordcloud
 
 
-def replace_labels(embedding_df, temp_embedding_df, label):
-    """replaces the label in a given part of the embedding dataframe
 
-    Args:
-        embedding_df (pd.DataFrame): dataframe of dimension-reduced encodings for text
-        temp_embedding_df (pd.DataFrame): temporary dataframe with the selected data and/or clustering
-        label (str): label to replace the labels in embedding_df with
-
-    Returns:
-        pd.DataFrame(): dataframe with replaced labels where necessary
-    """
-    embedding_df.loc[embedding_df.labelling_uuid.isin(
-        temp_embedding_df[temp_embedding_df.labels != 'None'].labelling_uuid), 'labels'] = label
-
-    return embedding_df
-
-def export_cache(dataset_name,path):
-    try:
-        dataset=pd.read_csv('data/plotting_data/cache/cache.csv')
-        dataset.to_csv(path+f'{dataset_name}.csv',index=False)
-    except:
-        pass    

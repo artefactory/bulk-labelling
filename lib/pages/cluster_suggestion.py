@@ -1,5 +1,5 @@
 from sklearn.cluster import OPTICS
-from lib.embedding import cluster
+from lib.processing import cluster
 import streamlit
 
 

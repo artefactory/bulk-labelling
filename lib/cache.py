@@ -1,6 +1,6 @@
 import json
 from lib.load_config import load_languages, load_transformer
-from lib.plotting import prepare_data
+from lib.embedding import prepare_data
 from lib.custom_whatlies import EmbeddingSet
 import time
 import logging
@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import streamlit
 from lib.embedding import get_embeddingset
+import pathlib
+import os
 
 
 def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name, my_bar, sample_data):
@@ -26,8 +28,10 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
         pd.DataFrame(): dataframe with encoded-transformed data
     """
     start = time.time()
-    lang = load_languages(embedding_language, languages_dict)
+    with streamlit.spinner(':hourglass: Loading language model...'):
+        lang = load_languages(embedding_language, languages_dict)
     s1 = time.time()
+    
     transformer = load_transformer(
         transformer_option, transformers_dict)
     s2 = time.time()
@@ -35,14 +39,15 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
 
     # textlist=dataset[column_name].astype(str).tolist()
     # embedding_df=prepare_data(lang,transformer,textlist).to_dataframe().reset_index()
-
-    temp_embsets = []
-    for k in range(len(temp_datasets)):
-        textlist = temp_datasets[k][column_name].astype(str).tolist()
-        temp_embset = prepare_data(lang, transformer, textlist)
-        my_bar.progress(k/len(temp_datasets))
-        # temp_embsets.append(temp_embset.to_dataframe().reset_index())
-        temp_embsets.append(temp_embset)
+    with streamlit.spinner(':hourglass: Computing embeddings...'):
+    
+        temp_embsets = []
+        for k in range(len(temp_datasets)):
+            textlist = temp_datasets[k][column_name].astype(str).tolist()
+            temp_embset = prepare_data(lang, transformer, textlist)
+            my_bar.progress(k/len(temp_datasets))
+            # temp_embsets.append(temp_embset.to_dataframe().reset_index())
+            temp_embsets.append(temp_embset)
 
     # embedding_df=pd.concat(temp_embsets)
 
@@ -51,8 +56,10 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
         embarray_texts += k.to_names_X()[0]
     embarray_encoding = np.vstack([k.to_names_X()[1] for k in temp_embsets])
 
-    embedding_df = get_embeddingset(embarray_encoding, embarray_texts).transform(
-        transformer).to_dataframe().reset_index()
+    with streamlit.spinner(':hourglass: Reducing embedding dimensions...'):
+        
+        embedding_df = get_embeddingset(embarray_encoding, embarray_texts).transform(
+            transformer).to_dataframe().reset_index()
 
     s3 = time.time()
 
@@ -69,3 +76,18 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
     logging.info(f'loading transformer : {s2-s1}')
     logging.info(f'preparing data total time : {s3-s2}')
     return embedding_df
+
+def clear_cache():
+    """clears the handmade cache
+    """
+    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*")
+     if (f.is_file() and not os.path.basename(f).startswith('.git'))]
+
+
+def export_cache(dataset_name,path):
+    try:
+        dataset=pd.read_csv('data/plotting_data/cache/cache.csv')
+        dataset.to_csv(path+f'{dataset_name}.csv',index=False)
+    except:
+        pass    
+
