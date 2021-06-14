@@ -1,18 +1,19 @@
 import json
-from lib.load_config import load_languages, load_transformer
-from lib.embedding import prepare_data
+from lib.utils.load_config import load_languages, load_transformer
+from lib.utils.embedding import prepare_data
 from lib.custom_whatlies import EmbeddingSet
+from lib.utils.processing import remove_stopwords_from_column
 import time
 import logging
 import numpy as np
 import pandas as pd
 import streamlit
-from lib.embedding import get_embeddingset
+from lib.utils.embedding import get_embeddingset
 import pathlib
 import os
 
 
-def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name, my_bar, sample_data):
+def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name, my_bar, sample_data, remove_stopwords, dataset_language):
     """wrapper function for the whole computation steps, including writing to cache.
 
     Args:
@@ -35,15 +36,22 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
     transformer = load_transformer(
         transformer_option, transformers_dict)
     s2 = time.time()
-    temp_datasets = np.array_split(dataset, 100)
 
-    # textlist=dataset[column_name].astype(str).tolist()
-    # embedding_df=prepare_data(lang,transformer,textlist).to_dataframe().reset_index()
+    
+    if remove_stopwords:
+        with streamlit.spinner(':hourglass: Computing embeddings...'):
+            dataset_to_filter=dataset.copy()
+            
+            dataset_to_filter[column_name]=remove_stopwords_from_column(dataset_to_filter[column_name],dataset_language)
+            temp_datasets = np.array_split(dataset_to_filter, 100)
+    else:
+        temp_datasets = np.array_split(dataset, 100)
+
     with streamlit.spinner(':hourglass: Computing embeddings...'):
     
         temp_embsets = []
         for k in range(len(temp_datasets)):
-            textlist = temp_datasets[k][column_name].astype(str).tolist()
+            textlist = temp_datasets[k][column_name].apply(lambda x:'None' if x=='' else x).astype(str).tolist()
             temp_embset = prepare_data(lang, transformer, textlist)
             my_bar.progress(k/len(temp_datasets))
             # temp_embsets.append(temp_embset.to_dataframe().reset_index())
@@ -69,7 +77,7 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
         'data/plotting_data/cache/cache.csv', index=False)
 
     json_cache = {'dataset': option, 'column': column_name,
-                  'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled': sample_data}
+                  'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled': sample_data, 'remove_stopwords':remove_stopwords, 'dataset_language':dataset_language}
     with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
         json.dump(json_cache, f, ensure_ascii=False, indent=4)
     logging.info(f'loading language : {s1-start}')

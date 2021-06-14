@@ -1,6 +1,6 @@
 import streamlit
 import pathlib
-from lib.embedding import get_embeddingset, get_language_array
+from lib.utils.embedding import get_embeddingset, get_language_array
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, CustomJS
 from bokeh.transform import factor_cmap

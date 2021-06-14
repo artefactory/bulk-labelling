@@ -1,3 +1,10 @@
+from spacy.lang.fr.stop_words import STOP_WORDS as fr_stop
+from spacy.lang.en.stop_words import STOP_WORDS as en_stop
+import spacy
+# from nltk.tokenize import word_tokenize
+import streamlit
+
+
 def replace_labels(embedding_df, temp_embedding_df, label):
     """replaces the label in a given part of the embedding dataframe
 
@@ -13,6 +20,7 @@ def replace_labels(embedding_df, temp_embedding_df, label):
         temp_embedding_df[temp_embedding_df.labels != 'None'].labelling_uuid), 'labels'] = label
 
     return embedding_df
+
 
 def cluster(algo, embset):
     """suggests cluster based on provided algo and embedding dataframe
@@ -31,3 +39,15 @@ def cluster(algo, embset):
     embed['cluster'] = labels
     embed['cluster'] = embed['cluster'].astype(str)
     return embed
+
+
+def remove_stopwords_from_column(Textcolumn, dataset_language):
+    if dataset_language == 'English':
+        nlp = spacy.load('en_core_web_md')
+    if dataset_language == 'French':
+        nlp = spacy.load('fr_core_news_sm')
+    result = Textcolumn.apply(lambda text:
+                              " ".join(token.lemma_ for token in nlp(text)
+                                       if not token.is_stop))
+
+    return result

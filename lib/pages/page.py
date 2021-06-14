@@ -1,4 +1,5 @@
 
+from spacy import language
 import streamlit
 import os
 import pandas as pd
@@ -8,11 +9,12 @@ import logging
 import matplotlib.pyplot as plt
 
 
-from lib.load_config import load_dataset_from_list, load_dataset, load_config
-from lib.cache import compute_to_cache, export_cache, clear_cache
-from lib.plotting import make_interactive_plot, generate_wordcloud
-from lib.processing import replace_labels
-from lib.pages import cluster_suggestion
+from lib.utils.load_config import load_config
+from lib.utils.data_ingestion import load_dataset
+from lib.utils.cache import compute_to_cache, export_cache, clear_cache
+from lib.utils.plotting import make_interactive_plot, generate_wordcloud
+from lib.utils.processing import replace_labels
+from lib.utils import cluster_suggestion
 
 
 def write():
@@ -26,6 +28,7 @@ def write():
     plot = None
     column_name = '-'
     embedding_df = None
+    dataset_language=None
 
     ##########################
     #      SIDEBAR           #
@@ -45,20 +48,6 @@ def write():
     uploaded_file_name = dataset_upload.text_input(
         "Custom dataset name", value='')
 
-    # move this to wrapper
-    # dataset = None
-    # if (uploaded_file is not None):
-    #     uploaded_dataset = pd.read_csv(uploaded_file)
-    #     dataset = uploaded_dataset.copy()
-    #     if uploaded_file_name != '':
-    #         uploaded_dataset.to_csv(
-    #             'data/datasets/{}.csv'.format(uploaded_file_name), index=False)
-
-    # available_datasets = datasets_dict + \
-    #     [i for i in os.listdir('data/datasets') if '.csv' in i]
-    # option = option_box.selectbox('Dataset:', available_datasets, index=0)
-    # dataset = load_dataset_from_list(option)
-
     dataset,option=load_dataset(uploaded_file,uploaded_file_name,datasets_dict,option_box)
 
     try:
@@ -77,10 +66,14 @@ def write():
         column_name = column_select.selectbox(
             'columns', options=['-'] + dataset.columns.tolist())
         sample_data = column_select.checkbox('Sample a smaller dataset')
+        remove_stopwords = column_select.checkbox('Remove stopwords')
         column_select.info(
             'One would sample the dataset to speed up calculations for a pre-labelling exploration phase')
         if sample_data:
             dataset = dataset.sample(n=1000)
+        if remove_stopwords:
+            dataset_language=column_select.selectbox('dataset language',['French','English'])
+        
 
         ##################################
         #   LANGUAGE MODEL SELECTION     #
@@ -132,10 +125,11 @@ def write():
         ##############################
 
     space = streamlit.sidebar.text('')
-    compute = streamlit.sidebar.button('compute embeddings')
-    show_labeled = streamlit.sidebar.checkbox('show labeled data')
-    clear_cache_button = streamlit.sidebar.button('clear cache')
-    clear_labels_button = streamlit.sidebar.button('reset labels')
+    compute = streamlit.sidebar.button('Compute embeddings')
+    show_labeled = streamlit.sidebar.checkbox('Show labeled data')
+    clear_cache_button = streamlit.sidebar.button('Clear cache')
+    clear_labels_button = streamlit.sidebar.button('Clear labels')
+    generate_sample_wordcloud = streamlit.sidebar.checkbox('Generate wordcloud')
 
         ##################################
         #      EXPORTING DATA            #
@@ -146,19 +140,11 @@ def write():
     dataset_name = dataset_name_container.text_input(
         'enter desired name for file')
     click_clear_dataset_name = export.button(
-        'clear label',key='export dataset')
+        'Next label',key='export dataset')
     if click_clear_dataset_name:
         dataset_name = dataset_name_container.text_input(
             'enter desired name for file', value='', key='empty dataset name')
     export.info('Exported data is saved by default to data/labeled_data/your_name.csv. modify this in the config file')
-
-
-
-
-
-
-
-
 
 
 
@@ -172,10 +158,8 @@ def write():
     big_container = streamlit.beta_container()
     progress_indicator = big_container.beta_container()
     progress_bar = progress_indicator.empty()
-    # wordcloud_container = streamlit.beta_container()
     chart_container_over, options_container = big_container.beta_columns(2)
     chart_container = chart_container_over.empty()
-    wordcloud_container=chart_container_over.empty()
     info_container = options_container.empty()
     dataview_container = options_container.empty()
     name_select = options_container.empty()
@@ -186,7 +170,6 @@ def write():
     #####################################
 
     if column_name != '-':
-
         if ('cache.json' not in os.listdir('data/plotting_data/cache')) and compute:
             my_bar = progress_bar.progress(0)
             
@@ -199,7 +182,9 @@ def write():
                 option,
                 column_name,
                 my_bar,
-                sample_data)
+                sample_data,
+                remove_stopwords,
+                dataset_language)
             progress_bar.success(":heavy_check_mark: Your data is ready!")
 
         if ('cache.json' in os.listdir('data/plotting_data/cache')) and compute:
@@ -207,7 +192,7 @@ def write():
             f = open('data/plotting_data/cache/cache.json')
             cached_data = json.load(f)
             json_cache = {'dataset': option, 'column': column_name,
-                          'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled':sample_data}
+                          'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled':sample_data, 'remove_stopwords':remove_stopwords, 'dataset_language':dataset_language}
             if cached_data != json_cache:
                 my_bar = progress_bar.progress(0)
                 embedding_df = compute_to_cache(
@@ -219,7 +204,9 @@ def write():
                     option,
                     column_name,
                     my_bar,
-                    sample_data)
+                    sample_data,
+                    remove_stopwords,
+                    dataset_language)
                 progress_bar.success(":heavy_check_mark: Your data is ready!")
             else:
                 embedding_df = pd.read_csv(
@@ -288,7 +275,7 @@ def write():
                             name_select_value = name_select.text_input(
                                 'Input selected data label')
                             click_clear = click_clear_container.button(
-                                'clear label')
+                                'Next label')
                             if click_clear:
                                 name_select_value = name_select.text_input(
                                     'Input selected data label', value='', key=1)
@@ -330,21 +317,24 @@ def write():
                                 embedding_df.to_csv(
                                     'data/plotting_data/cache/cache.csv', index=False)
                                 
-                            wordcloud = generate_wordcloud(
-                                selected_data.text.tolist())
-                            fig, ax = plt.subplots()
-                            wordcloud_fig = ax.imshow(
-                                wordcloud, interpolation="bilinear")
-                            ax.axis('off')
-                            plt.savefig(
-                                'data/plotting_data/wordcloud.png')
+                            
                             if len(selected_data) != 0:
                                 dataview_container.dataframe(
-                                    selected_data.head(30), height=150)
+                                    selected_data[['text','labels']].head(30), height=150)
                             else:
                                 info_container.text('')
+                            if generate_sample_wordcloud:
+                                wordcloud = generate_wordcloud(
+                                    selected_data.text.tolist())
+                                fig, ax = plt.subplots()
+                                wordcloud_fig = ax.imshow(
+                                    wordcloud, interpolation="bilinear")
+                                ax.axis('off')
+                                plt.savefig(
+                                    'data/plotting_data/wordcloud.png')
+                                
 
-                            options_container.image('data/plotting_data/wordcloud.png',use_column_width=True)
+                                options_container.image('data/plotting_data/wordcloud.png',use_column_width=True)
 
             except Exception as error:
                 streamlit.write(error)

@@ -1,6 +1,6 @@
 import streamlit as st
 
-import lib.page as bulk_labelling_app
+import lib.pages.page as bulk_labelling_app
 
 def write_page(page):
     page.write()
