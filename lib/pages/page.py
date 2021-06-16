@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from lib.utils.load_config import load_config
 from lib.utils.data_ingestion import load_dataset
 from lib.utils.cache import (
+    compute_cache_test,
     compute_to_cache,
     export_cache,
     clear_cache,
@@ -80,8 +81,6 @@ def write():
         column_select.info(
             "One would sample the dataset to speed up calculations for a pre-labelling exploration phase"
         )
-        if sample_data:
-            dataset = dataset.sample(n=1000)
         if remove_stopwords:
             dataset_language = column_select.selectbox(
                 "dataset language", ["French", "English"]
@@ -95,6 +94,8 @@ def write():
                     .apply(lambda x: x.replace(" ", ""))
                     .tolist()
                 )
+        else:
+            custom_stopwords=None
 
         ##################################
         #   LANGUAGE MODEL SELECTION     #
@@ -195,66 +196,8 @@ def write():
     #####################################
 
     if column_name != "-":
-        # if ("cache.json" not in os.listdir("data/plotting_data/cache")) and compute:
-        #     my_bar = progress_bar.progress(0)
 
-        #     embedding_df = compute_to_cache(
-        #         embedding_language,
-        #         languages_dict,
-        #         transformer_option,
-        #         transformers_dict,
-        #         dataset,
-        #         option,
-        #         column_name,
-        #         my_bar,
-        #         sample_data,
-        #         remove_stopwords,
-        #         dataset_language,
-        #         custom_stopwords,
-        #     )
-        #     progress_bar.success(":heavy_check_mark: Your data is ready!")
-
-        # if ("cache.json" in os.listdir("data/plotting_data/cache")) and compute:
-
-        #     with open("data/plotting_data/cache/cache.json", encoding='utf-8') as f:
-        #         cached_data = json.load(f)
-        #     json_cache = {
-        #         "dataset": option,
-        #         "column": column_name,
-        #         "language_model": embedding_language,
-        #         "reduction_algorithm": transformer_option,
-        #         "sampled": sample_data,
-        #         "remove_stopwords": remove_stopwords,
-        #         "dataset_language": dataset_language,
-        #         "custom_stopwords": custom_stopwords,
-        #     }
-        #     if cached_data != json_cache:
-        #         my_bar = progress_bar.progress(0)
-        #         embedding_df = compute_to_cache(
-        #             embedding_language,
-        #             languages_dict,
-        #             transformer_option,
-        #             transformers_dict,
-        #             dataset,
-        #             option,
-        #             column_name,
-        #             my_bar,
-        #             sample_data,
-        #             remove_stopwords,
-        #             dataset_language,
-        #             custom_stopwords,
-        #         )
-        #         progress_bar.success(":heavy_check_mark: Your data is ready!")
-        #     else:
-        #         embedding_df = pd.read_csv("data/plotting_data/cache/cache.csv")
-
-        # else:
-        #     try:
-        #         embedding_df = pd.read_csv("data/plotting_data/cache/cache.csv")
-        #     except:
-        #         pass
-
-        embedding_df = fetch_embedding_df_from_cache(
+        embedding_df = compute_cache_test(
             progress_bar,
             embedding_language,
             languages_dict,
