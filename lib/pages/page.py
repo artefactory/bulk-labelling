@@ -11,11 +11,9 @@ import matplotlib.pyplot as plt
 from lib.utils.load_config import load_config
 from lib.utils.data_ingestion import load_dataset
 from lib.utils.cache import (
-    compute_cache_test,
-    compute_to_cache,
+    compute_cache,
     export_cache,
     clear_cache,
-    fetch_embedding_df_from_cache,
 )
 from lib.utils.plotting import make_interactive_plot, generate_wordcloud
 from lib.utils.processing import replace_labels
