@@ -53,6 +53,16 @@ def cluster(algo, embset):
 
 
 def remove_stopwords_from_column(Textcolumn, dataset_language, custom_stopwords):
+    """Removes stopwords from the text column of the dataframe
+
+    Args:
+        Textcolumn (pd.Series): pandas Series description of the column to remove stopwords from
+        dataset_language (str): language of model to load from spacy to get default stopwords
+        custom_stopwords (list): list of custom stopwords to add to default language stopwords
+
+    Returns:
+        pd.Series : modified text column with stopwords removed
+    """
     if dataset_language == "English":
         nlp = spacy.load("en_core_web_md")
     if dataset_language == "French":
@@ -68,6 +78,15 @@ def remove_stopwords_from_column(Textcolumn, dataset_language, custom_stopwords)
 
 
 def cluster_tfidf(df, language="French"):
+    """generates an estimation of possible topic names for suggested clusters
+
+    Args:
+        df (pd.DataFrame): dataframe with cluster suggestion numbers
+        language (str, optional): language to load spacy model for stopwords from. Defaults to "French".
+
+    Returns:
+        pd.DataFrame : modified dataframe with cluster numbers replaced with top 3 cluster name suggestions
+    """
     if language == "English":
         stopwords_list = en_stop
     if language == "French":

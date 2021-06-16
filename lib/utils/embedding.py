@@ -55,7 +55,7 @@ def get_language_array(lang, textlist=None):
         return lang[textlist].to_names_X()[1], lang[textlist].to_names_X()[0]
 
 
-def prepare_data(lang, transformer, textlist=None):
+def prepare_data(lang, textlist=None):
     """encodes and transforms a list of texts with the models chosen by the user
 
     Args:
@@ -71,7 +71,6 @@ def prepare_data(lang, transformer, textlist=None):
     step1 = time.time()
     embset = get_embeddingset(encoding, texts)
     step2 = time.time()
-    # embset = embset.transform(transformer)
     end = time.time()
     logging.info(f'getting encodings : {step1-start}')
     logging.info(f'getting embeddingset : {step2-step1}')

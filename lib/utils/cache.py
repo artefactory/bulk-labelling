@@ -1,7 +1,7 @@
 import json
 from lib.utils.load_config import load_languages, load_transformer
 from lib.utils.embedding import prepare_data
-from lib.custom_whatlies import EmbeddingSet
+from lib.custom_whatlies import EmbeddingSet, embedding
 from lib.utils.processing import remove_stopwords_from_column
 import time
 import logging
@@ -69,7 +69,7 @@ def compute_to_cache(
                 .astype(str)
                 .tolist()
             )
-            temp_embset = prepare_data(lang, transformer, textlist)
+            temp_embset = prepare_data(lang, textlist)
             my_bar.progress(k / len(temp_datasets))
             # temp_embsets.append(temp_embset.to_dataframe().reset_index())
             temp_embsets.append(temp_embset)
@@ -92,7 +92,6 @@ def compute_to_cache(
 
     s3 = time.time()
 
-    # embedding_df = embset.to_dataframe().reset_index()
     embedding_df["labelling_uuid"] = dataset.labelling_uuid
     embedding_df.to_csv("data/plotting_data/cache/cache.csv", index=False)
 
@@ -114,6 +113,114 @@ def compute_to_cache(
     return embedding_df
 
 
+
+def fetch_embedding_df_from_cache(
+    progress_bar,
+    embedding_language,
+    languages_dict,
+    transformer_option,
+    transformers_dict,
+    dataset,option,
+    column_name,
+    sample_data,
+    remove_stopwords,
+    dataset_language,
+    custom_stopwords,
+    compute):
+    embedding_df=None
+    if ("cache.json" not in os.listdir("data/plotting_data/cache")) and compute:
+                my_bar = progress_bar.progress(0)
+
+                embedding_df = compute_to_cache(
+                    embedding_language,
+                    languages_dict,
+                    transformer_option,
+                    transformers_dict,
+                    dataset,
+                    option,
+                    column_name,
+                    my_bar,
+                    sample_data,
+                    remove_stopwords,
+                    dataset_language,
+                    custom_stopwords,
+                )
+                progress_bar.success(":heavy_check_mark: Your data is ready!")
+
+    if ("cache.json" in os.listdir("data/plotting_data/cache")) and compute:
+
+        with open("data/plotting_data/cache/cache.json", encoding='utf-8') as f:
+            cached_data = json.load(f)
+        json_cache = {
+            "dataset": option,
+            "column": column_name,
+            "language_model": embedding_language,
+            "reduction_algorithm": transformer_option,
+            "sampled": sample_data,
+            "remove_stopwords": remove_stopwords,
+            "dataset_language": dataset_language,
+            "custom_stopwords": custom_stopwords,
+        }
+        if cached_data != json_cache:
+            my_bar = progress_bar.progress(0)
+            embedding_df = compute_to_cache(
+                embedding_language,
+                languages_dict,
+                transformer_option,
+                transformers_dict,
+                dataset,
+                option,
+                column_name,
+                my_bar,
+                sample_data,
+                remove_stopwords,
+                dataset_language,
+                custom_stopwords,
+            )
+            progress_bar.success(":heavy_check_mark: Your data is ready!")
+        else:
+            embedding_df = pd.read_csv("data/plotting_data/cache/cache.csv")
+    
+    else:
+        try:
+            embedding_df = pd.read_csv("data/plotting_data/cache/cache.csv")
+        except:
+            pass
+    return embedding_df
+
+
+
+
+def compute_stopwords():
+    pass
+
+def compute_embeddings(stopwords_df):
+    pass
+
+def compute_dimension_reduction(embeddings_df):
+    pass
+
+
+
+def read_cache(path):
+    return pd.read_csv(path)
+
+def write_cache(path,df):
+    df.to_csv(path,index=False)
+
+def clear_embeddings_cache():
+    pass
+
+def clear_reduction_cache():
+    pass
+
+
+
+
+
+
+
+
 def clear_cache():
     """clears the handmade cache"""
     [
@@ -124,6 +231,12 @@ def clear_cache():
 
 
 def export_cache(dataset_name, path):
+    """exports cache to wanted path once labelising is done
+
+    Args:
+        dataset_name (str): name of dataset to save to path
+        path (str): path root to save dataset to
+    """
     try:
         dataset = pd.read_csv("data/plotting_data/cache/cache.csv")
         dataset.to_csv(path + f"{dataset_name}.csv", index=False)

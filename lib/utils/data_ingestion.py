@@ -24,6 +24,12 @@ def load_dataset_from_list(dataset_name):
 
 
 def load_dataset(uploaded_file, uploaded_file_name, datasets_dict, option_box):
+
+    """loads dataset, taking into account the sample datasets provided and potential user uploads
+
+    Returns:
+        pd.DataFrame:  dataset to analyze
+    """
     dataset = None
 
     # from the point of user perspective, which is more intuitive? does the uploaded dataset take precedence or the selected one?
