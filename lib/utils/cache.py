@@ -18,6 +18,7 @@ def compute_stopwords(
 ):
     if remove_stopwords:
         dataset_to_filter = sampled_data.copy()
+        
         dataset_to_filter[column_name] = remove_stopwords_from_column(
             dataset_to_filter[column_name], dataset_language, custom_stopwords
         )
@@ -40,7 +41,7 @@ def compute_embeddings(
     my_bar = progress_bar.progress(0)
     with streamlit.spinner(":hourglass: Loading language model..."):
         lang = load_languages(embedding_language, languages_dict)
-
+    uuid_series=df.labelling_uuid
     temp_datasets = np.array_split(df, 100)
     with streamlit.spinner(":hourglass: Computing embeddings..."):
 
@@ -63,13 +64,15 @@ def compute_embeddings(
     df = (
         get_embeddingset(embarray_encoding, embarray_texts).to_dataframe().reset_index()
     )
+    df['labelling_uuid']=uuid_series
     return df
 
 
 def compute_dimension_reduction(df, transformer_option, transformers_dict):
     with streamlit.spinner(":hourglass: Reducing embedding dimensions..."):
         transformer = load_transformer(transformer_option, transformers_dict)
-        embarray_encoding = df.drop(columns="index").values
+        uuid_series=df.labelling_uuid
+        embarray_encoding = df.drop(columns=["index","labelling_uuid"]).values
         embarray_texts = df["index"]
         embedding_df = (
             get_embeddingset(embarray_encoding, embarray_texts)
@@ -77,6 +80,7 @@ def compute_dimension_reduction(df, transformer_option, transformers_dict):
             .to_dataframe()
             .reset_index()
         )
+        embedding_df['labelling_uuid']=uuid_series
         return embedding_df
 
 
@@ -102,14 +106,18 @@ def compute_all(
     dataset_language
 ):
     df = compute_samples(sample_data, df)
-    write_cache("sampled_cache.csv", df)
+    # write_cache("sampled_cache.csv", df)
+    streamlit.write(df)
     df = compute_stopwords(remove_stopwords, df, column_name,dataset_language,custom_stopwords)
-    write_cache("stopwords_cache.csv", df)
+    # write_cache("stopwords_cache.csv", df)
+    streamlit.write(df)
     df = compute_embeddings(
         df, embedding_language, languages_dict, progress_bar, column_name
     )
-    write_cache("embedding_cache.csv", df)
+    # write_cache("embedding_cache.csv", df)
+    streamlit.write(df)
     df = compute_dimension_reduction(df, transformer_option, transformers_dict)
+    # write_cache("cache.csv",df)
     return df
 
 
@@ -143,22 +151,11 @@ def compute_cache(
 
 
     if ("cache.json" not in os.listdir("data/plotting_data/cache")) and compute:
-        streamlit.write("no cache. computing...")
-        my_bar = progress_bar.progress(0)
 
-        df = compute_all(
-            sample_data,
-            dataset,
-            remove_stopwords,
-            column_name,
-            embedding_language,
-            languages_dict,
-            progress_bar,
-            transformer_option,
-            transformers_dict,
-            dataset_language,
-            custom_stopwords
-        )
+        my_bar = progress_bar.progress(0)
+        
+        df = compute_all(sample_data,dataset,remove_stopwords,column_name,embedding_language,languages_dict,progress_bar,transformer_option,transformers_dict,custom_stopwords,dataset_language)
+        
 
         no_cache = True
         progress_bar.success(":heavy_check_mark: Your data is ready!")

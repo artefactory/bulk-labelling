@@ -194,8 +194,7 @@ def write():
     #####################################
 
     if column_name != "-":
-
-        embedding_df = compute_cache_test(
+        embedding_df = compute_cache(
             progress_bar,
             embedding_language,
             languages_dict,
@@ -295,12 +294,14 @@ def write():
                                         temp_embedding_df,
                                         name_select_value,
                                     )
+
+
                                     temp_embedding_df = embedding_df[
                                         embedding_df.labels == "None"
                                     ]
 
-                                except:
-                                    pass
+                                except Exception as e:
+                                    streamlit.write(e)
 
                                 if show_labeled:
                                     temp_embedding_df = embedding_df.copy()
