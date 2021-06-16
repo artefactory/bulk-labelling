@@ -13,7 +13,20 @@ import pathlib
 import os
 
 
-def compute_to_cache(embedding_language, languages_dict, transformer_option, transformers_dict, dataset, option, column_name, my_bar, sample_data, remove_stopwords, dataset_language):
+def compute_to_cache(
+    embedding_language,
+    languages_dict,
+    transformer_option,
+    transformers_dict,
+    dataset,
+    option,
+    column_name,
+    my_bar,
+    sample_data,
+    remove_stopwords,
+    dataset_language,
+    custom_stopwords,
+):
     """wrapper function for the whole computation steps, including writing to cache.
 
     Args:
@@ -29,31 +42,35 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
         pd.DataFrame(): dataframe with encoded-transformed data
     """
     start = time.time()
-    with streamlit.spinner(':hourglass: Loading language model...'):
+    with streamlit.spinner(":hourglass: Loading language model..."):
         lang = load_languages(embedding_language, languages_dict)
     s1 = time.time()
-    
-    transformer = load_transformer(
-        transformer_option, transformers_dict)
+
+    transformer = load_transformer(transformer_option, transformers_dict)
     s2 = time.time()
 
-    
     if remove_stopwords:
-        with streamlit.spinner(':hourglass: Computing embeddings...'):
-            dataset_to_filter=dataset.copy()
-            
-            dataset_to_filter[column_name]=remove_stopwords_from_column(dataset_to_filter[column_name],dataset_language)
+        with streamlit.spinner(":hourglass: Computing embeddings..."):
+            dataset_to_filter = dataset.copy()
+            dataset_to_filter[column_name] = remove_stopwords_from_column(
+                dataset_to_filter[column_name], dataset_language, custom_stopwords
+            )
             temp_datasets = np.array_split(dataset_to_filter, 100)
     else:
         temp_datasets = np.array_split(dataset, 100)
 
-    with streamlit.spinner(':hourglass: Computing embeddings...'):
-    
+    with streamlit.spinner(":hourglass: Computing embeddings..."):
+
         temp_embsets = []
         for k in range(len(temp_datasets)):
-            textlist = temp_datasets[k][column_name].apply(lambda x:'None' if x=='' else x).astype(str).tolist()
+            textlist = (
+                temp_datasets[k][column_name]
+                .apply(lambda x: "None" if x == "" else x)
+                .astype(str)
+                .tolist()
+            )
             temp_embset = prepare_data(lang, transformer, textlist)
-            my_bar.progress(k/len(temp_datasets))
+            my_bar.progress(k / len(temp_datasets))
             # temp_embsets.append(temp_embset.to_dataframe().reset_index())
             temp_embsets.append(temp_embset)
 
@@ -64,38 +81,51 @@ def compute_to_cache(embedding_language, languages_dict, transformer_option, tra
         embarray_texts += k.to_names_X()[0]
     embarray_encoding = np.vstack([k.to_names_X()[1] for k in temp_embsets])
 
-    with streamlit.spinner(':hourglass: Reducing embedding dimensions...'):
-        
-        embedding_df = get_embeddingset(embarray_encoding, embarray_texts).transform(
-            transformer).to_dataframe().reset_index()
+    with streamlit.spinner(":hourglass: Reducing embedding dimensions..."):
+
+        embedding_df = (
+            get_embeddingset(embarray_encoding, embarray_texts)
+            .transform(transformer)
+            .to_dataframe()
+            .reset_index()
+        )
 
     s3 = time.time()
 
     # embedding_df = embset.to_dataframe().reset_index()
-    embedding_df['labelling_uuid'] = dataset.labelling_uuid
-    embedding_df.to_csv(
-        'data/plotting_data/cache/cache.csv', index=False)
+    embedding_df["labelling_uuid"] = dataset.labelling_uuid
+    embedding_df.to_csv("data/plotting_data/cache/cache.csv", index=False)
 
-    json_cache = {'dataset': option, 'column': column_name,
-                  'language_model': embedding_language, 'reduction_algorithm': transformer_option, 'sampled': sample_data, 'remove_stopwords':remove_stopwords, 'dataset_language':dataset_language}
-    with open('data/plotting_data/cache/cache.json', 'w', encoding='utf-8') as f:
+    json_cache = {
+        "dataset": option,
+        "column": column_name,
+        "language_model": embedding_language,
+        "reduction_algorithm": transformer_option,
+        "sampled": sample_data,
+        "remove_stopwords": remove_stopwords,
+        "dataset_language": dataset_language,
+        "custom_stopwords": custom_stopwords,
+    }
+    with open("data/plotting_data/cache/cache.json", "w", encoding="utf-8") as f:
         json.dump(json_cache, f, ensure_ascii=False, indent=4)
-    logging.info(f'loading language : {s1-start}')
-    logging.info(f'loading transformer : {s2-s1}')
-    logging.info(f'preparing data total time : {s3-s2}')
+    logging.info(f"loading language : {s1-start}")
+    logging.info(f"loading transformer : {s2-s1}")
+    logging.info(f"preparing data total time : {s3-s2}")
     return embedding_df
 
+
 def clear_cache():
-    """clears the handmade cache
-    """
-    [f.unlink() for f in pathlib.Path("data/plotting_data/cache").glob("*")
-     if (f.is_file() and not os.path.basename(f).startswith('.git'))]
+    """clears the handmade cache"""
+    [
+        f.unlink()
+        for f in pathlib.Path("data/plotting_data/cache").glob("*")
+        if (f.is_file() and not os.path.basename(f).startswith(".git"))
+    ]
 
 
-def export_cache(dataset_name,path):
+def export_cache(dataset_name, path):
     try:
-        dataset=pd.read_csv('data/plotting_data/cache/cache.csv')
-        dataset.to_csv(path+f'{dataset_name}.csv',index=False)
+        dataset = pd.read_csv("data/plotting_data/cache/cache.csv")
+        dataset.to_csv(path + f"{dataset_name}.csv", index=False)
     except:
-        pass    
-
+        pass
