@@ -99,7 +99,7 @@ def cluster_tfidf(df, language="French"):
             colormap="Blues",
             width=100,
             height=100,
-        ).generate(" ".join(df[df.cluster == k].text.tolist()).lower())
+        ).generate(" ".join(df[df.cluster == k].text.astype(str).tolist()).lower())
         top_3 = list(wordcloud.words_.keys())
         df.loc[df.cluster == k, "cluster"] = f"{top_3[0]} - {top_3[1]} - {top_3[2]}"
     return df

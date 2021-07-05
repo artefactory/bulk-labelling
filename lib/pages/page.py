@@ -74,6 +74,7 @@ def write():
         column_name = column_select.selectbox(
             "columns", options=["-"] + dataset.columns.tolist()
         )
+        
         sample_data = column_select.checkbox("Sample a smaller dataset")
         remove_stopwords = column_select.checkbox("Remove stopwords")
         column_select.info(
@@ -145,16 +146,6 @@ def write():
         else:
             xi_value = 0.01
 
-        ##############################
-        #       VARIOUS BUTTONS      #
-        ##############################
-
-    space = streamlit.sidebar.text("")
-    compute = streamlit.sidebar.button("Compute embeddings")
-    show_labeled = streamlit.sidebar.checkbox("Show labeled data")
-    clear_cache_button = streamlit.sidebar.button("Clear cache")
-    clear_labels_button = streamlit.sidebar.button("Clear labels")
-    generate_sample_wordcloud = streamlit.sidebar.checkbox("Generate wordcloud")
 
     ##################################
     #      EXPORTING DATA            #
@@ -171,6 +162,20 @@ def write():
     export.info(
         "Exported data is saved by default to data/labeled_data/your_name.csv. modify this in the config file"
     )
+
+        ##############################
+        #       VARIOUS BUTTONS      #
+        ##############################
+
+    space = streamlit.sidebar.text("")
+    compute = streamlit.sidebar.button("Compute embeddings")
+    clear_cache_button = streamlit.sidebar.button("Clear cache")
+    clear_labels_button = streamlit.sidebar.button("Clear labels")
+
+    show_labeled = streamlit.sidebar.checkbox("Show labeled data")
+    
+    generate_sample_wordcloud = streamlit.sidebar.checkbox("Generate wordcloud")
+
 
     if clear_cache_button:
         clear_cache()
@@ -194,6 +199,8 @@ def write():
     #####################################
 
     if column_name != "-":
+
+        dataset[column_name]=dataset[column_name].astype(str)
         embedding_df = compute_cache(
             progress_bar,
             embedding_language,

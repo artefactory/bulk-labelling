@@ -49,7 +49,7 @@ def make_interactive_plot(embset, cluster):
     plot.xgrid.grid_line_color = None
     plot.ygrid.grid_line_color = None
     plot.outline_line_color = None
-
+    plot.toolbar.logo = None
 
 
 
