@@ -19,7 +19,7 @@ spacy==3.0.6
 streamlit==0.82.0
 streamlit-bokeh-events==0.1.2
 tensorflow==2.5.0
-transformers==4.6.1
+transformers==4.48.0
 umap-learn==0.5.1
 whatlies==0.6.3
 numpy

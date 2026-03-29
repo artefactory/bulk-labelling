@@ -16,12 +16,14 @@ import os
 def compute_stopwords(
     remove_stopwords, sampled_data, column_name, dataset_language, custom_stopwords
 ):
+    
     if remove_stopwords:
-        dataset_to_filter = sampled_data.copy()
-        
-        dataset_to_filter[column_name] = remove_stopwords_from_column(
-            dataset_to_filter[column_name], dataset_language, custom_stopwords
-        )
+        with streamlit.spinner(':hourglass: Filtering Stopwords...'):
+            dataset_to_filter = sampled_data.copy()
+            
+            dataset_to_filter[column_name] = remove_stopwords_from_column(
+                dataset_to_filter[column_name], dataset_language, custom_stopwords
+            )
         return dataset_to_filter
     else:
         return sampled_data
@@ -107,15 +109,12 @@ def compute_all(
 ):
     df = compute_samples(sample_data, df)
     # write_cache("sampled_cache.csv", df)
-    streamlit.write(df)
     df = compute_stopwords(remove_stopwords, df, column_name,dataset_language,custom_stopwords)
     # write_cache("stopwords_cache.csv", df)
-    streamlit.write(df)
     df = compute_embeddings(
         df, embedding_language, languages_dict, progress_bar, column_name
     )
     # write_cache("embedding_cache.csv", df)
-    streamlit.write(df)
     df = compute_dimension_reduction(df, transformer_option, transformers_dict)
     # write_cache("cache.csv",df)
     return df
